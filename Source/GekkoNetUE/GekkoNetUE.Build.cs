@@ -11,7 +11,7 @@ public class GekkoNetUE : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
-			"GekkoNet"   // our ThirdParty module
+			"GekkoNet",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
