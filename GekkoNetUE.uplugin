@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "GekkoNetUE",
+	"Description": "Unreal Engine 5 wrapper for the GekkoNet P2P rollback networking SDK.",
+	"Category": "Networking",
+	"CreatedBy": "",
+	"CreatedByURL": "https://github.com/HeatXD/GekkoNet",
+	"DocsURL": "https://heatxd.github.io/GekkoNet/",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "GekkoNetUE",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
