@@ -17,6 +17,14 @@ enum class EGekkoTransportType : uint8
 };
 
 UENUM(BlueprintType)
+enum class EGekkoPlayerType : uint8
+{
+	LocalPlayer,
+	RemotePlayer,
+	Spectator,
+};
+
+UENUM(BlueprintType)
 enum class EGekkoSessionType : uint8
 {
 	Game			UMETA(DisplayName = "Game Session"),
@@ -38,27 +46,7 @@ struct FGekkoNetworkStats
 };
 
 USTRUCT(BlueprintType)
-struct FGekkoPeer
-{
-	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 PlayerIndex = INDEX_NONE;
-	
-};
-
-USTRUCT(BlueprintType)
-struct FGekkoLocalPeer : public FGekkoPeer
-{
-	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 LocalInputDelay = DEFAULT_INPUT_DELAY;
-	
-};
-
-USTRUCT(BlueprintType)
-struct FGekkoRemotePeer : public FGekkoPeer
+struct FGekkoRemoteData
 {
 	GENERATED_BODY()
 	
@@ -66,13 +54,28 @@ struct FGekkoRemotePeer : public FGekkoPeer
 	FString Address;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Port = INDEX_NONE;
+	int32 RemotePort = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString PlatformUserId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString SocketId;
+};
+
+USTRUCT(BlueprintType)
+struct FGekkoPlayerPeer
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EGekkoPlayerType PlayerType = EGekkoPlayerType::LocalPlayer;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Local", meta=(EditCondition="PlayerType == EGekkoPlayerType::LocalPlayer", EditConditionHides))
+	int32 LocalInputDelay = DEFAULT_INPUT_DELAY;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Remote", meta=(EditCondition="PlayerType == EGekkoPlayerType::RemotePlayer", EditConditionHides))
+	FGekkoRemoteData RemoteInfo;
 };
 
 USTRUCT(BlueprintType)
@@ -94,13 +97,9 @@ struct FGekkoSessionConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EGekkoSessionType SessionType = EGekkoSessionType::Game;
 	
-	// Indexes of the Local players.
+	// Indexes of the Players.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FGekkoLocalPeer> LocalPlayers;
-	
-	// Player information of Remote players.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FGekkoRemotePeer> RemotePlayers;
+	TArray<FGekkoPlayerPeer> Players;
 	
 	// The connectivity method of the session.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -137,55 +136,24 @@ struct FGekkoSessionConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Stress")
 	int32 CheckDistance = 0;
 	
-	void AddPlayer(FString Address = "", int32 Port = 7000, int32 Index = INDEX_NONE)
+	void AddPlayer(FString Address = "", int32 Port = 7000, bool IsSpectating)
 	{
-		bool is_local = Address.IsEmpty();
-		int32 player_index = Index > 0 ? Index : LocalPlayers.Num() + RemotePlayers.Num();
-		if (is_local)
+		FGekkoPlayerPeer Peer {};
+		if (IsSpectating)
 		{
-			FGekkoLocalPeer LocalPeer {};
-			LocalPeer.PlayerIndex = player_index;
-			
-			LocalPlayers.Add(LocalPeer);
+			Peer.PlayerType = EGekkoPlayerType::Spectator;
 		}
 		else
 		{
-			FGekkoRemotePeer RemotePeer {};
-			RemotePeer.PlayerIndex = player_index;
-			RemotePeer.Address = Address;
-			RemotePeer.Port = Port;
-			
-			RemotePlayers.Add(RemotePeer);
+			Peer.PlayerType = Address.IsEmpty() ? EGekkoPlayerType::LocalPlayer : EGekkoPlayerType::RemotePlayer;
 		}
-	}
-	
-	// Returns the max number of players, this does not include spectators.
-	int32 GetNumberOfPlayers() const
-	{
-		return LocalPlayers.Num() + RemotePlayers.Num();
-	}
-	
-	// Returns the max number of participants, this includes spectators.
-	int32 GetNumberOfParticipants() const
-	{
-		return LocalPlayers.Num() + RemotePlayers.Num() + MaxSpectators;
-	}
-	
-	FGekkoRemotePeer GetFirstRemotePlayer() const
-	{
-		if (RemotePlayers.Num() <= 0)
-		{
-			return FGekkoRemotePeer {};
-		}
-		return RemotePlayers[0];
-	}
 
-	int32 GetFirstPlayerLocalDelay() const
-	{
-		if (LocalPlayers.Num() <= 0)
+		if (Peer.PlayerType == EGekkoPlayerType::RemotePlayer)
 		{
-			return DEFAULT_INPUT_DELAY;
+			Peer.RemoteInfo.Address = Address;
+			Peer.RemoteInfo.RemotePort = Port;
 		}
-		return LocalPlayers[0].LocalInputDelay;
+		
+		Players.Add(Peer);
 	}
 };

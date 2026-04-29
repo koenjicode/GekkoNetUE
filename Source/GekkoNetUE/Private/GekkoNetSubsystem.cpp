@@ -19,15 +19,13 @@ bool UGekkoNetSubsystem::CreateSession(int32 LocalPort, bool AsSpectator)
 {
     DestroySession();
     
-    int32 num_players = Config.GetNumberOfParticipants();
-    
     GekkoConfig config{};
     
     // default
     config.input_size = Config.SessionSize.InputSize;
     config.state_size = Config.SessionSize.StateSize;
     config.input_prediction_window = Config.InputPredictionWindow;
-    config.num_players = num_players;
+    config.num_players = Config.Players.Num();
     
     // spectators
     config.max_spectators = Config.MaxSpectators;
@@ -52,47 +50,26 @@ bool UGekkoNetSubsystem::CreateSession(int32 LocalPort, bool AsSpectator)
     gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalPort));
     
     gekko_set_runahead(Session, Config.FramesRunahead);
-    
-    // loop through the num of players in the game, adding them to gekko locally or remotely.
-    for (int i = 0; i < num_players; i++) {
-        bool is_local = false;
-        for (int j = 0; j < Config.LocalPlayers.Num(); j++) {
-            if (Config.LocalPlayers[j].PlayerIndex == i) {
-                is_local = true;
-                break;
-            }
-        }
 
-        if (is_local) {
-            int local_delay = 1;
-            for (int j = 0; j < Config.LocalPlayers.Num(); j++) {
-                if (Config.LocalPlayers[j].PlayerIndex == i) {
-                    local_delay = Config.LocalPlayers[j].LocalInputDelay;
-                    break;
-                }
-            }
+    for (int i = 0; i < Config.Players.Num(); ++i)
+    {
+        FGekkoPlayerPeer Player = Config.Players[i];
+        if (Player.PlayerType == EGekkoPlayerType::LocalPlayer)
+        {
             gekko_add_actor(Session, GekkoLocalPlayer, nullptr);
-            gekko_set_local_delay(Session, i, local_delay + Config.FramesRunahead);
+            gekko_set_local_delay(Session, i, Player.LocalInputDelay + Config.FramesRunahead);
         }
-        else {
-            int remote_port = 0;
-            for (int j = 0; j < Config.RemotePlayers.Num(); j++) {
-                if (Config.RemotePlayers[j].PlayerIndex == i) {
-                    remote_port = Config.RemotePlayers[j].Port;
-                    break;
-                }
-            }
+        else
+        {
             GekkoNetAddress addr = {};
             
-            // Build the address as FString
-            FString AddressStr = FString::Printf(TEXT("127.0.0.1:%d"), remote_port);
-
-            // Convert at the GekkoNet boundary
+            FString AddressStr = FString::Printf(TEXT("127.0.0.1:%d"), Player.RemoteInfo.RemotePort);
             auto AnsiStr = StringCast<ANSICHAR>(*AddressStr);
             addr.data = (void*)AnsiStr.Get();
             addr.size = AnsiStr.Length();
             
-            gekko_add_actor(Session, GekkoRemotePlayer, &addr);
+            bool bIsSpectating = Player.PlayerType == EGekkoPlayerType::Spectator;
+            gekko_add_actor(Session, bIsSpectating ? GekkoSpectator : GekkoRemotePlayer, &addr);
         }
     }
 
@@ -114,55 +91,81 @@ void UGekkoNetSubsystem::SetSessionConfig(FGekkoSessionConfig NewConfig)
 {
     if (IsSessionActive())
     {
-        // Ignore updating if a session is actively running.
-        return;
-    }
-    Config = NewConfig;
-}
-
-bool UGekkoNetSubsystem::SetLocalDelay(int32 Player, int32 Delay)
-{
-    if (!IsSessionActive())
-    {
-        return false;
-    }
-    for (int i = 0; i < Config.LocalPlayers.Num(); i++)
-    {
-        if (Config.LocalPlayers[i].PlayerIndex == Player)
+        Config.FramesRunahead = NewConfig.FramesRunahead;
+        gekko_set_runahead(Session, Config.FramesRunahead);
+        
+        for (int i = 0; i < Config.Players.Num(); i++)
         {
-            Config.LocalPlayers[i].LocalInputDelay = Delay;
-            break;
+            if (Config.Players[i].PlayerType == EGekkoPlayerType::LocalPlayer)
+            {
+                Config.Players[i].LocalInputDelay = NewConfig.Players[i].LocalInputDelay;
+                gekko_set_local_delay(Session, i, Config.Players[i].LocalInputDelay);
+            }
         }
     }
-    gekko_set_local_delay(Session, Player, Delay);
-    return true;
+    else
+    {
+        Config = NewConfig;
+    }
+}
+
+bool UGekkoNetSubsystem::SetLocalDelay(int32 PlayerIndex, int32 Delay)
+{
+    bool bChangedOccured = false;
+    FGekkoSessionConfig UpdateConfig = Config;
+    for (int i = 0; i < UpdateConfig.Players.Num(); i++)
+    {
+        if (i == PlayerIndex)
+        {
+            if (UpdateConfig.Players[i].PlayerType == EGekkoPlayerType::LocalPlayer)
+            {
+                UpdateConfig.Players[i].LocalInputDelay = Delay;
+                bChangedOccured = true;
+                break;
+            }
+        }
+    }
+
+    if (bChangedOccured)
+    {
+        SetSessionConfig(UpdateConfig);
+        return true;
+    }
+    return false;
+}
+
+bool UGekkoNetSubsystem::SetLocalDelayForAllPlayers(int32 Delay)
+{
+    bool bChangedOccured = false;
+    FGekkoSessionConfig UpdateConfig = Config;
+    for (int i = 0; i < UpdateConfig.Players.Num(); i++)
+    {
+        if (UpdateConfig.Players[i].PlayerType == EGekkoPlayerType::LocalPlayer)
+        {
+            bChangedOccured = true;
+            UpdateConfig.Players[i].LocalInputDelay = Delay;
+        }
+    }
+    
+    if (bChangedOccured)
+    {
+        SetSessionConfig(UpdateConfig);
+        return true;
+    }
+    return false;
 }
 
 bool UGekkoNetSubsystem::SetRunahead(int32 Runahead)
 {
-    if (!IsSessionActive())
-    {
-        return false;
-    }
-    Config.FramesRunahead = Runahead;
-    gekko_set_runahead(Session, Runahead);
-    return true;
-}
+    FGekkoSessionConfig UpdateConfig = Config;
 
-bool UGekkoNetSubsystem::GetNetworkStats(int32 PlayerHandle, FGekkoNetworkStats& OutStats) const
-{
-    if (!IsSessionActive())
+    if (UpdateConfig.FramesRunahead != Runahead)
     {
-        return false;
+        UpdateConfig.FramesRunahead = Runahead;
+        SetSessionConfig(UpdateConfig);
+        return true;
     }
-    GekkoNetworkStats gekkostats{};
-    gekko_network_stats(Session, PlayerHandle, &gekkostats);
-    OutStats.KbSent     = gekkostats.kb_sent;
-    OutStats.KbReceived = gekkostats.kb_received;
-    OutStats.LastPing   = gekkostats.last_ping;
-    OutStats.AvgPing    = gekkostats.avg_ping;
-    OutStats.Jitter     = gekkostats.jitter;
-    return true;
+    return false;
 }
 
 float UGekkoNetSubsystem::GetFramesAhead() const
@@ -174,13 +177,49 @@ float UGekkoNetSubsystem::GetFramesAhead() const
     return gekko_frames_ahead(Session);
 }
 
-float UGekkoNetSubsystem::GetPlayerPing(int32 Player) const
+bool UGekkoNetSubsystem::GetNetworkStats(int32 PlayerIndex, FGekkoNetworkStats& OutStats) const
+{
+    if (!IsSessionActive())
+    {
+        return false;
+    }
+    GekkoNetworkStats gekkostats{};
+    gekko_network_stats(Session, PlayerIndex, &gekkostats);
+    OutStats.KbSent     = gekkostats.kb_sent;
+    OutStats.KbReceived = gekkostats.kb_received;
+    OutStats.LastPing   = gekkostats.last_ping;
+    OutStats.AvgPing    = gekkostats.avg_ping;
+    OutStats.Jitter     = gekkostats.jitter;
+    return true;
+}
+
+float UGekkoNetSubsystem::GetPlayerPing(int32 PlayerIndex) const
 {
     if (!IsSessionActive())
     {
         return 0.f;
     }
     GekkoNetworkStats gekkostats{};
-    gekko_network_stats(Session, Player, &gekkostats);
+    gekko_network_stats(Session, PlayerIndex, &gekkostats);
     return gekkostats.avg_ping;
+}
+
+bool UGekkoNetSubsystem::IsPlayerType(EGekkoPlayerType Type, int32 PlayerIndex)
+{
+    return Config.Players[PlayerIndex].PlayerType == Type;
+}
+
+bool UGekkoNetSubsystem::IsLocalPlayer(int32 PlayerIndex)
+{
+    return IsPlayerType(EGekkoPlayerType::LocalPlayer, PlayerIndex);
+}
+
+bool UGekkoNetSubsystem::IsRemotePlayer(int32 PlayerIndex)
+{
+    return IsPlayerType(EGekkoPlayerType::RemotePlayer, PlayerIndex);
+}
+
+bool UGekkoNetSubsystem::IsSpectator(int32 PlayerIndex)
+{
+    return IsPlayerType(EGekkoPlayerType::Spectator, PlayerIndex);
 }

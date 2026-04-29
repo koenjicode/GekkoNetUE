@@ -32,21 +32,33 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetSessionConfig(FGekkoSessionConfig NewConfig);
 	UFUNCTION(BlueprintCallable)
-	bool SetLocalDelay(int32 Player, int32 Delay);
+	bool SetLocalDelay(int32 PlayerIndex, int32 Delay);
+	UFUNCTION(BlueprintCallable)
+	bool SetLocalDelayForAllPlayers(int32 Delay);
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead);
+	
 	
 	UFUNCTION(BlueprintPure)
 	bool IsSessionActive() const { return Session != nullptr; }
 	UFUNCTION(BlueprintPure)
-	bool GetNetworkStats(int32 Player, FGekkoNetworkStats& OutStats) const;
-	UFUNCTION(BlueprintPure)
 	float GetFramesAhead() const;
+	
 	UFUNCTION(BlueprintPure)
-	float GetPlayerPing(int32 Player) const;
+	bool GetNetworkStats(int32 PlayerIndex, FGekkoNetworkStats& OutStats) const;
+	UFUNCTION(BlueprintPure)
+	float GetPlayerPing(int32 PlayerIndex) const;
+	UFUNCTION(BlueprintPure)
+	bool IsPlayerType(EGekkoPlayerType Type, int32 PlayerIndex);
+	UFUNCTION(BlueprintPure)
+	bool IsLocalPlayer(int32 PlayerIndex);
+	UFUNCTION(BlueprintPure)
+	bool IsRemotePlayer(int32 PlayerIndex);
+	UFUNCTION(BlueprintPure)
+	bool IsSpectator(int32 PlayerIndex);
     
 	// Current Session Config that is stored in the subsystem.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FGekkoSessionConfig Config;
 	// GekkoNet session.
 	GekkoSession* Session;
