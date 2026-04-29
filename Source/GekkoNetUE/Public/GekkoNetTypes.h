@@ -66,7 +66,7 @@ struct FGekkoRemotePeer : public FGekkoPeer
 	FString Address;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Port = 0;
+	int32 Port = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString PlatformUserId;
@@ -101,10 +101,6 @@ struct FGekkoSessionConfig
 	// Player information of Remote players.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FGekkoRemotePeer> RemotePlayers;
-	
-	// Local port used for the session.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 LocalPort = 7000;
 	
 	// The connectivity method of the session.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -161,15 +157,35 @@ struct FGekkoSessionConfig
 			
 			RemotePlayers.Add(RemotePeer);
 		}
-		
 	}
 	
+	// Returns the max number of players, this does not include spectators.
+	int32 GetNumberOfPlayers() const
+	{
+		return LocalPlayers.Num() + RemotePlayers.Num();
+	}
+	
+	// Returns the max number of participants, this includes spectators.
+	int32 GetNumberOfParticipants() const
+	{
+		return LocalPlayers.Num() + RemotePlayers.Num() + MaxSpectators;
+	}
+	
+	FGekkoRemotePeer GetFirstRemotePlayer() const
+	{
+		if (RemotePlayers.Num() <= 0)
+		{
+			return FGekkoRemotePeer {};
+		}
+		return RemotePlayers[0];
+	}
+
 	int32 GetFirstPlayerLocalDelay() const
 	{
-		if (LocalPlayers.Num() > 0)
+		if (LocalPlayers.Num() <= 0)
 		{
-			return LocalPlayers[0].LocalInputDelay;
+			return DEFAULT_INPUT_DELAY;
 		}
-		return DEFAULT_INPUT_DELAY;
+		return LocalPlayers[0].LocalInputDelay;
 	}
 };

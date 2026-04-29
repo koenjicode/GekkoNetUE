@@ -21,27 +21,33 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
+	// Creates a new GekkoNet online session that allows players to connect together. A session config needs to be provided.
 	UFUNCTION(BlueprintCallable)
-	bool Create(const FGekkoSessionConfig& Config, bool IsSpectator);
+	bool CreateSession(int32 LocalPort = 7000, bool AsSpectator = false);
+	// Destroys the currrent GekkoNet session that is running.
 	UFUNCTION(BlueprintCallable)
-	void Destroy();
+	void DestroySession();
 	
+	// Set a new session configuration, this session config will be used next time.
+	UFUNCTION(BlueprintCallable)
+	void SetSessionConfig(FGekkoSessionConfig NewConfig);
 	UFUNCTION(BlueprintCallable)
 	bool SetLocalDelay(int32 Player, int32 Delay);
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead);
 	
 	UFUNCTION(BlueprintPure)
-	bool IsSessionActive() const { return session != nullptr; }
+	bool IsSessionActive() const { return Session != nullptr; }
 	UFUNCTION(BlueprintPure)
 	bool GetNetworkStats(int32 Player, FGekkoNetworkStats& OutStats) const;
 	UFUNCTION(BlueprintPure)
 	float GetFramesAhead() const;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	FGekkoSessionConfig CurrentSessionConfig;
+	UFUNCTION(BlueprintPure)
+	float GetPlayerPing(int32 Player) const;
     
-private:
-    
-	GekkoSession* session;
+	// Current Session Config that is stored in the subsystem.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	FGekkoSessionConfig Config;
+	// GekkoNet session.
+	GekkoSession* Session;
 };
