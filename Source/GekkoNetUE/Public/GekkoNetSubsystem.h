@@ -28,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DestroySession();
 	
+	// TODO: Find a way to pass this through in blueprints, might not be possible.
+	bool AddLocalInput(int32 PlayerIndex, void* Input);
+	
 	// Set a new session configuration, this session config will be used next time.
 	UFUNCTION(BlueprintCallable)
 	void SetSessionConfig(FGekkoSessionConfig NewConfig);

@@ -87,6 +87,16 @@ void UGekkoNetSubsystem::DestroySession()
     }
 }
 
+bool UGekkoNetSubsystem::AddLocalInput(int32 PlayerIndex, void* Input)
+{
+    if (!IsLocalPlayer(PlayerIndex))
+    {
+        return false;
+    }
+    gekko_add_local_input(Session, PlayerIndex, Input);
+    return true;
+}
+
 void UGekkoNetSubsystem::SetSessionConfig(FGekkoSessionConfig NewConfig)
 {
     if (IsSessionActive())
