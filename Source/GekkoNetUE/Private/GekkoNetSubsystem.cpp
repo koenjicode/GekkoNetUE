@@ -2,7 +2,6 @@
 
 #include "GekkoNetSubsystem.h"
 #include "GekkoNetUnrealAdapter.h"
-#include "Cooker/CookDependency.h"
 
 void UGekkoNetSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -38,9 +37,7 @@ bool UGekkoNetSubsystem::CreateSession(int32 LocalPort, bool AsSpectator)
     config.desync_detection = Config.DesyncDetection;
     
     // Should be primarily used in debugging scenarios, might be worth removing this from the session config.
-    bool session_created = gekko_create(&Session, AsSpectator ? GekkoSpectateSession : GekkoGameSession);
-    
-    if (!session_created)
+    if (!gekko_create(&Session, AsSpectator ? GekkoSpectateSession : GekkoGameSession))
     {
         return false;
     }
