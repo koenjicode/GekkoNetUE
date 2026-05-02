@@ -70,6 +70,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsSpectator(int32 PlayerIndex);
     
+	// The Associated player ID that will be used when connecting.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	uint8 PlayerId;
 	// Current Session Config that is stored in the subsystem.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FGekkoSessionConfig Config;
