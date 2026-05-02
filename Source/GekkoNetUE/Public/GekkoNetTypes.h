@@ -136,7 +136,7 @@ struct FGekkoSessionConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Stress")
 	int32 CheckDistance = 0;
 	
-	void AddPlayer(FString Address = "", int32 Port = 7000, bool IsSpectating)
+	void AddPlayer(FString Address = "", int32 Port = 7000, bool IsSpectating = false)
 	{
 		FGekkoPlayerPeer Peer {};
 		if (IsSpectating)
@@ -155,5 +155,18 @@ struct FGekkoSessionConfig
 		}
 		
 		Players.Add(Peer);
+	}
+	
+	int32 GetNumberOfPlayers()
+	{
+		int count = 0;
+		for (int i = 0; i < Players.Num(); i++)
+		{
+			if (Players[i].PlayerType != EGekkoPlayerType::Spectator)
+			{
+				++count;
+			}
+		}
+		return count;
 	}
 };
