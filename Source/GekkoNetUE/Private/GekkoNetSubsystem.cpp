@@ -44,7 +44,8 @@ bool UGekkoNetSubsystem::CreateSession(int32 LocalPort, bool AsSpectator)
     
     // TODO: current only supporting raw local ip connections, but the net adapter will need to be updated
     gekko_start(Session, &config);
-    gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalPort));
+    // gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalPort));
+    gekko_net_adapter_set(Session, gekko_default_adapter(LocalPort));
     
     gekko_set_runahead(Session, Config.FramesRunahead);
 
@@ -60,7 +61,7 @@ bool UGekkoNetSubsystem::CreateSession(int32 LocalPort, bool AsSpectator)
         {
             GekkoNetAddress addr = {};
             
-            FString AddressStr = FString::Printf(TEXT("127.0.0.1:%d"), Player.RemoteInfo.RemotePort);
+            FString AddressStr = FString::Printf(TEXT("%s:%d"), *Player.RemoteInfo.Address, Player.RemoteInfo.RemotePort);
             auto AnsiStr = StringCast<ANSICHAR>(*AddressStr);
             addr.data = (void*)AnsiStr.Get();
             addr.size = AnsiStr.Length();
