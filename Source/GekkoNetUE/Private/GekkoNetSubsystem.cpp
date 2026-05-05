@@ -7,8 +7,18 @@
 #define STATS_UPDATE_TIMER_MAX 60
 #define FRAME_SKIP_TIMER_MAX 60 // Allow skipping a frame roughly every second
 
-void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
+void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost, int32 PlayerIndex)
 {
+    if (NewHost == nullptr && SimulationHost.GetObject() == nullptr)
+    {
+        UE_LOG(LogGekkoNet, Error, TEXT("No host present for Gekko to run, failed to start session."));
+        return;
+    }
+    if (PlayerIndex < 0 || PlayerIndex > Config.NumPlayers)
+    {
+        UE_LOG(LogGekkoNet, Error, TEXT("Invalid player index chosen, failed to start session."));
+        return;
+    }
     GekkoConfig config = {};
     FMemory::Memzero(&config, sizeof(GekkoConfig));
     
@@ -28,6 +38,7 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
     } else
     {
         UE_LOG(LogGekkoNet, Error, TEXT("Session is already running, failed to start a new one."));
+        return;
     }
     
     if (PlayerNumber == 0)
@@ -62,10 +73,8 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
             gekko_add_actor(Session, GekkoRemotePlayer, &RemoteAddress);
         }
     }
-    
     SessionState = EGekkoSessionState::Connecting;
 }
-
 
 void UGekkoNetSubsystem::ShutdownGekko()
 {
@@ -117,12 +126,11 @@ void UGekkoNetSubsystem::RunNetplay()
 
 void UGekkoNetSubsystem::HandleDisconnection(GekkoSessionEvent* Ev)
 {
-    IGekkoNetSimulationInterface* Host = SimulationHost ? Cast<IGekkoNetSimulationInterface>(SimulationHost.GetObject()) : nullptr;
     FramesBehind = -gekko_frames_ahead(Session);
     if (SessionState == EGekkoSessionState::Exiting || SessionState == EGekkoSessionState::Idling) {
         return;
     }
-    Host->GekkoDisconnect(Ev);
+    SimulationHost->GekkoDisconnect(Ev);
     OnPlayerDisconnected.Broadcast(Ev->data.disconnected.handle);
     SessionState = EGekkoSessionState::Exiting;
 }
@@ -135,7 +143,6 @@ void UGekkoNetSubsystem::StepLogic(bool bShouldDraw)
 
 void UGekkoNetSubsystem::ProcessSession()
 {
-    IGekkoNetSimulationInterface* Host = SimulationHost ? Cast<IGekkoNetSimulationInterface>(SimulationHost.GetObject()) : nullptr;
     FramesBehind = -gekko_frames_ahead(Session);
     
     gekko_network_poll(Session);
@@ -143,7 +150,7 @@ void UGekkoNetSubsystem::ProcessSession()
     TArray<uint8> input_data;
     input_data.SetNumZeroed(InputSize);
 
-    Host->GekkoGetLocalInputs(input_data.GetData());
+    SimulationHost->GekkoGetLocalInputs(input_data.GetData());
     gekko_add_local_input(Session, PlayerNumber, input_data.GetData());
 
     int session_event_count = 0;
@@ -206,37 +213,30 @@ void UGekkoNetSubsystem::ProcessSession()
 
 void UGekkoNetSubsystem::ProcessEvents(bool bShouldDraw)
 {
-    IGekkoNetSimulationInterface* Host = SimulationHost ? Cast<IGekkoNetSimulationInterface>(SimulationHost.GetObject()) : nullptr;
-    
     int event_count = 0;
     int frames_rolled_back = 0;
     GekkoGameEvent** Updates = gekko_update_session(Session, &event_count);
     for (int i = 0; i < event_count; ++i)
     {
         GekkoGameEvent* Ev = Updates[i];
-        if (!Host)
-        {
-            continue;
-        }
-
         switch (Ev->type)
         {
         case GekkoSaveEvent:
             {
-                Host->GekkoSave(Ev);
+                SimulationHost->GekkoSave(Ev);
                 UE_LOG(LogGekkoNet, Log, TEXT("Gekko save called! (Frame:%d Checksum:%d"), Ev->data.save.frame, *Ev->data.save.checksum);
                 break;
             }
         case GekkoLoadEvent:
             {
-                Host->GekkoLoad(Ev);
+                SimulationHost->GekkoLoad(Ev);
                 UE_LOG(LogGekkoNet, Log, TEXT("Gekko load called! (Frame:%d"), Ev->data.load.frame);
                 break;
             }
         case GekkoAdvanceEvent:
             {
                 const bool rolling_back = Ev->data.adv.rolling_back;
-                Host->GekkoAdvance(Ev, bShouldDraw && !rolling_back);
+                SimulationHost->GekkoAdvance(Ev, bShouldDraw && !rolling_back);
                 frames_rolled_back += rolling_back ? 1 : 0;
                 break;
             }
@@ -244,6 +244,7 @@ void UGekkoNetSubsystem::ProcessEvents(bool bShouldDraw)
             break;
         }
     }
+    FrameMaxRollback = FMath::Max(FrameMaxRollback, frames_rolled_back);
 }
 
 void UGekkoNetSubsystem::UpdateNetworkStats()
@@ -271,6 +272,26 @@ void UGekkoNetSubsystem::UpdateNetworkStats()
     StatsUpdateTimer =  FMath::Max(StatsUpdateTimer, 0);
 }
 
+FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats() const
+{
+    GekkoNetworkStats net_stats;
+    gekko_network_stats(Session, PlayerNumber ^ 1, &net_stats);
+    
+    FGekkoFullNetworkStats FullNetStats;
+    FullNetStats.AvgPing = net_stats.avg_ping;
+    FullNetStats.Jitter = net_stats.jitter;
+    FullNetStats.KbReceived = net_stats.kb_received;
+    FullNetStats.KbSent = net_stats.kb_sent;
+    
+    return FullNetStats;
+}
+
+bool UGekkoNetSubsystem::SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost)
+{
+    SimulationHost = NewHost;
+    return SimulationHost.GetObject() ? true : false;
+}
+
 bool UGekkoNetSubsystem::SetLocalDelay(int32 LocalPlayer, int32 Delay)
 {
     if (Session == nullptr)
@@ -289,6 +310,11 @@ bool UGekkoNetSubsystem::SetRunahead(int32 Runahead)
     }
     gekko_set_runahead(Session, Runahead);
     return false;
+}
+
+bool UGekkoNetSubsystem::IsSessionActive() const
+{
+    return Session != nullptr;
 }
 
 bool UGekkoNetSubsystem::NeedToCatchUp() const

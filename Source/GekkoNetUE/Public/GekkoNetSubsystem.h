@@ -26,7 +26,7 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
     
 public:
 	
-	void StartGekko(FGekkoSessionConfig config);
+	void StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost = nullptr, int32 PlayerIndex = 0);
 	void ShutdownGekko();
 
 	void UpdateNetplay();
@@ -41,10 +41,18 @@ public:
 	
 	void UpdateNetworkStats();
 	
+	UFUNCTION(BlueprintPure)
+	FGekkoFullNetworkStats GetFullNetworkStats() const;
+	
+	UFUNCTION()
+	bool SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost);
 	UFUNCTION(BlueprintCallable)
 	bool SetLocalDelay(int32 LocalPlayer, int32 Delay);
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead);
+	
+	UFUNCTION(BlueprintPure)
+	bool IsSessionActive() const;
 	
 	bool NeedToCatchUp() const;
     
@@ -55,7 +63,7 @@ public:
 	
 	// network stats
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	FGekkoNetworkStats NetStats;
+	FGekkoSimpleNetworkStats NetStats;
 	int32 StatsUpdateTimer;
 	int32 FrameMaxRollback;
 	
