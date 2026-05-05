@@ -8,6 +8,14 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GekkoNetSubsystem.generated.h"
 
+#undef DESYNC_TESTING
+#undef UNREAL_SOCKETS
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGekkoPlayerEvent, int32, Handle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FGekkoSyncingEvent, int32, Handle, int32, Current, int32, Max);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGekkoSessionStartedEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGekkoDesyncEvent, FGekkoDesyncInfo, Info);
+
 /**
  * 
  */
@@ -17,65 +25,71 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
     
 public:
-    
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
 	
-	// Creates a new GekkoNet online session that allows players to connect together. A session config needs to be provided.
-	UFUNCTION(BlueprintCallable)
-	bool CreateSession(int32 LocalPort = 7000, bool AsSpectator = false);
-	// Destroys the currrent GekkoNet session that is running.
-	UFUNCTION(BlueprintCallable)
-	void DestroySession();
+	void StartGekko(FGekkoSessionConfig config);
 	
-	// TODO: Find a way to pass this through in blueprints, might not be possible.
-	bool AddLocalInput(int32 PlayerIndex, void* Input);
+	void UpdateNetplay();
+	void RunNetplay();
 	
-	// Set a new session configuration, this session config will be used next time.
+	void HandleDisconnection(GekkoSessionEvent* Ev);
+	
+	void StepLogic(bool bShouldDraw);
+	
+	void ProcessSession();
+	void ProcessEvents(bool bShouldDraw);
+	
+	void UpdateNetworkStats();
+	
 	UFUNCTION(BlueprintCallable)
-	void SetSessionConfig(FGekkoSessionConfig NewConfig);
-	// Sets the local delay for an existing local player in the game.
-	UFUNCTION(BlueprintCallable)
-	bool SetLocalDelay(int32 PlayerIndex, int32 Delay);
-	// Sets the same local delay for all local players present in the game.
-	UFUNCTION(BlueprintCallable)
-	bool SetLocalDelayForAllPlayers(int32 Delay);
-	// Set how many frames the game should process in advance.
+	bool SetLocalDelay(int32 LocalPlayer, int32 Delay);
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead);
 	
-	// Checks whether a session is currently running.
-	UFUNCTION(BlueprintPure)
-	bool IsSessionActive() const { return Session != nullptr; }
-	// Get how many frames difference between you and other clients. Should be used within deterministic loop calculations.
-	UFUNCTION(BlueprintPure)
-	float GetFramesAhead() const;
-	
-	// Get network stats in association from a player.
-	UFUNCTION(BlueprintPure)
-	bool GetNetworkStats(int32 PlayerIndex, FGekkoNetworkStats& OutStats) const;
-	// Get a player's ping.
-	UFUNCTION(BlueprintPure)
-	float GetPlayerPing(int32 PlayerIndex) const;
-	// Checks if the specified player is of a specified type.
-	UFUNCTION(BlueprintPure)
-	bool IsPlayerType(EGekkoPlayerType Type, int32 PlayerIndex);
-	// Checks if the player is local.
-	UFUNCTION(BlueprintPure)
-	bool IsLocalPlayer(int32 PlayerIndex);
-	// Checks if the player is remote.
-	UFUNCTION(BlueprintPure)
-	bool IsRemotePlayer(int32 PlayerIndex);
-	// Checks if the player is a spectator.
-	UFUNCTION(BlueprintPure)
-	bool IsSpectator(int32 PlayerIndex);
+	bool NeedToCatchUp() const;
     
-	// The Associated player ID that will be used when connecting.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	uint8 PlayerId;
-	// Current Session Config that is stored in the subsystem.
+	// game player index
+	UPROPERTY()
+	int32 PlayerNumber;
+	UPROPERTY()
+	int32 PlayerHandle;
+	
+	
+	// network stats
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	FGekkoSessionConfig Config;
-	// GekkoNet session.
+	FGekkoNetworkStats NetStats;
+	UPROPERTY()
+	int32 StatsUpdateTimer;
+	UPROPERTY()
+	int32 FrameMaxRollback;
+	
+	// local networking
+	int32 LocalPort = INDEX_NONE;
+	int32 RemotePort = INDEX_NONE;
+	
+	// session
 	GekkoSession* Session;
+	UPROPERTY()
+	EGekkoSessionState SessionState;
+	UPROPERTY()
+	int32 FrameSkipTimer;
+	UPROPERTY()
+	int32 FramesBehind;
+	UPROPERTY()
+	int32 TransitionReadyFrames;
+	
+	int32 NumPlayers;
+	int32 InputSize;
+	int32 StateSize;
+	
+	// simulation state
+	UPROPERTY()
+	TScriptInterface<IGekkoNetSimulationInterface> SimulationHost;
+	
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnPlayerConnected;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnPlayerDisconnected;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoSyncingEvent OnPlayerSyncing;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoSessionStartedEvent OnSessionStarted;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorPaused;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorUnpaused;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoDesyncEvent OnDesyncDetected;
 };
