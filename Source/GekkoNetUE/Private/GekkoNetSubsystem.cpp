@@ -14,10 +14,13 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
         UE_LOG(LogGekkoNet, Error, TEXT("No host present for Gekko to run, failed to start session."));
         return;
     }
-    if (PlayerIndex < 0 || PlayerIndex > Config.NumPlayers)
+    if (PlayerNumber < 0)
     {
-        UE_LOG(LogGekkoNet, Error, TEXT("Invalid player index chosen, failed to start session."));
-        return;
+        if (PlayerIndex < 0 || PlayerIndex > Config.NumPlayers)
+        {
+            UE_LOG(LogGekkoNet, Error, TEXT("Invalid player index chosen, failed to start session."));
+            return;
+        }
     }
     GekkoConfig config = {};
     FMemory::Memzero(&config, sizeof(GekkoConfig));
