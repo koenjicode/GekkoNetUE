@@ -44,7 +44,7 @@ enum class EGekkoSessionType : uint8
 };
 
 USTRUCT(BlueprintType)
-struct FGekkoNetworkStats
+struct FGekkoSimpleNetworkStats
 {
 	GENERATED_BODY()
 	
@@ -58,17 +58,11 @@ struct FGekkoFullNetworkStats
 {
 	GENERATED_BODY()
 	
-	// out stats
 	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") float KbSent = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") float KbReceived = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") int32 LastPing = 0;
-	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") float Ping = 0.f;
+	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") float AvgPing = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") float Jitter = 0.f;
-	
-	// calculated
-	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") int32 Delay = DEFAULT_INPUT_DELAY;
-	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") int32 Rollback = FRAME_MAX_ROLLBACK;
-	
 };
 
 USTRUCT(BlueprintType)
