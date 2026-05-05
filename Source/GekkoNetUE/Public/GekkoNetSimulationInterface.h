@@ -23,16 +23,9 @@ class GEKKONETUE_API IGekkoNetSimulationInterface
 
 public:
 	
-	// Grab local inputs.
-	virtual void GekkoGetLocalInputs(void* OutInputData);
-	
-	// Handle saving.
-	virtual void GekkoSave(GekkoGameEvent* Event);
-	// Handle loading.
-	virtual void GekkoLoad(GekkoGameEvent* Event);
-
-	// Advance the game state with a choice to render the visual output.
-	virtual void GekkoAdvance(GekkoGameEvent* Event, bool Render);
-	// Handle disconnecting the game when a player has left.
-	virtual void GekkoDisconnect(GekkoSessionEvent* Event);
+	virtual void GekkoGetLocalInputs(void* OutInputData) = 0;
+	virtual void GekkoSave(GekkoGameEvent* Event) = 0;
+	virtual void GekkoLoad(GekkoGameEvent* Event) = 0;
+	virtual void GekkoAdvance(GekkoGameEvent* Event, bool Render) = 0;
+	virtual void GekkoDisconnect(GekkoSessionEvent* Event) = 0;
 };
