@@ -8,7 +8,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GekkoNetSubsystem.generated.h"
 
-#undef DESYNC_TESTING
+#define GEKKO_DEBUG
 #undef UNREAL_SOCKETS
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGekkoPlayerEvent, int32, Handle);
@@ -49,18 +49,14 @@ public:
 	bool NeedToCatchUp() const;
     
 	// game player index
-	UPROPERTY()
-	int32 PlayerNumber;
-	UPROPERTY()
-	int32 PlayerHandle;
+	int32 PlayerNumber = INDEX_NONE;
+	int32 PlayerHandle = INDEX_NONE;
 	
 	
 	// network stats
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FGekkoNetworkStats NetStats;
-	UPROPERTY()
 	int32 StatsUpdateTimer;
-	UPROPERTY()
 	int32 FrameMaxRollback;
 	
 	// local networking
@@ -69,14 +65,11 @@ public:
 	
 	// session
 	GekkoSession* Session;
-	UPROPERTY()
 	EGekkoSessionState SessionState;
-	UPROPERTY()
 	int32 FrameSkipTimer;
-	UPROPERTY()
 	int32 FramesBehind;
-	UPROPERTY()
 	int32 TransitionReadyFrames;
+	
 	
 	int32 NumPlayers;
 	int32 InputSize;

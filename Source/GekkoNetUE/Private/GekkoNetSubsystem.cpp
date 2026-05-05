@@ -19,7 +19,7 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
     config.max_spectators = 0;
     config.input_prediction_window = Config.InputPredictionWindow;
 
-#if defined(DESYNC_TESTING)
+#if defined(GEKKO_DEBUG)
     config.desync_detection = true;
 #endif
 
@@ -224,11 +224,13 @@ void UGekkoNetSubsystem::ProcessEvents(bool bShouldDraw)
         case GekkoSaveEvent:
             {
                 Host->GekkoSave(Ev);
+                UE_LOG(LogGekkoNet, Log, TEXT("Gekko save called! (Frame:%d Checksum:%d"), Ev->data.save.frame, *Ev->data.save.checksum);
                 break;
             }
         case GekkoLoadEvent:
             {
                 Host->GekkoLoad(Ev);
+                UE_LOG(LogGekkoNet, Log, TEXT("Gekko load called! (Frame:%d"), Ev->data.load.frame);
                 break;
             }
         case GekkoAdvanceEvent:
