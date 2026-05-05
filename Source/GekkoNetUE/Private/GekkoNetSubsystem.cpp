@@ -9,11 +9,22 @@
 
 void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost, int32 PlayerIndex)
 {
-    if (NewHost == nullptr && SimulationHost.GetObject() == nullptr)
+    if (Config.NumPlayers < 2 || Config.InputSize <= 0 || Config.StateSize <= 0)
     {
-        UE_LOG(LogGekkoNet, Error, TEXT("No host present for Gekko to run, failed to start session."));
+        UE_LOG(LogGekkoNet, Error, TEXT("Bad config created, failed to start session."));
         return;
     }
+    
+    if (SimulationHost.GetObject() == nullptr)
+    {
+        if (NewHost == nullptr)
+        {
+            UE_LOG(LogGekkoNet, Error, TEXT("No host present for Gekko to run, failed to start session."));
+            return;
+        }
+        SetSimulationHost(NewHost);
+    }
+
     if (PlayerNumber < 0)
     {
         if (PlayerIndex < 0 || PlayerIndex > Config.NumPlayers)
@@ -21,7 +32,9 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
             UE_LOG(LogGekkoNet, Error, TEXT("Invalid player index chosen, failed to start session."));
             return;
         }
+        PlayerNumber = PlayerIndex;
     }
+    
     GekkoConfig config = {};
     FMemory::Memzero(&config, sizeof(GekkoConfig));
     
@@ -79,19 +92,25 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
     SessionState = EGekkoSessionState::Connecting;
 }
 
-void UGekkoNetSubsystem::ShutdownGekko(bool ClearPlayerIndex)
+void UGekkoNetSubsystem::ShutdownGekko()
 {
     if (Session != nullptr)
     {
         gekko_destroy(&Session);
         gekko_default_adapter_destroy();
         SessionState = EGekkoSessionState::Idling;
-
-        if (ClearPlayerIndex)
-        {
-            PlayerNumber = INDEX_NONE;
-            PlayerHandle = INDEX_NONE;
-        }
+        
+        UE_LOG(LogGekkoNet, Warning, TEXT("Closing session for player %d at port %hu\n"), PlayerNumber, LocalPort);
+        
+        PlayerNumber = INDEX_NONE;
+        PlayerHandle = INDEX_NONE;
+        
+        LocalPort = 0;
+        RemotePort = 0;
+        
+        NumPlayers = 0;
+        InputSize = 0;
+        StateSize = 0;
     }
 }
 

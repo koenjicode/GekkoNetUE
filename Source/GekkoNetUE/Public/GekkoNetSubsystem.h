@@ -27,7 +27,7 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 public:
 	
 	void StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost = nullptr, int32 PlayerIndex = INDEX_NONE);
-	void ShutdownGekko(bool ClearPlayerIndex = true);
+	void ShutdownGekko();
 
 	void UpdateNetplay();
 	void RunNetplay();
