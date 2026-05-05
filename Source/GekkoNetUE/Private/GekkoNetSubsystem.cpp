@@ -79,13 +79,19 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
     SessionState = EGekkoSessionState::Connecting;
 }
 
-void UGekkoNetSubsystem::ShutdownGekko()
+void UGekkoNetSubsystem::ShutdownGekko(bool ClearPlayerIndex)
 {
     if (Session != nullptr)
     {
         gekko_destroy(&Session);
         gekko_default_adapter_destroy();
         SessionState = EGekkoSessionState::Idling;
+
+        if (ClearPlayerIndex)
+        {
+            PlayerNumber = INDEX_NONE;
+            PlayerHandle = INDEX_NONE;
+        }
     }
 }
 
@@ -102,7 +108,7 @@ void UGekkoNetSubsystem::UpdateNetplay()
         RunNetplay();
         break;
     case EGekkoSessionState::Exiting:
-        ShutdownGekko();
+        ShutdownGekko(TODO);
         break;
     }
 }
