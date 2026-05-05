@@ -44,14 +44,13 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
     gekko_net_adapter_set(Session, gekko_default_adapter(LocalPort));
     
     UE_LOG(LogGekkoNet, Log, TEXT("Starting a session for player %d at port %hu\n"), PlayerNumber, LocalPort);
-    
-    GekkoNetAddress remote_address;
             
-    FString address_string = FString::Printf(TEXT("%s:%d"), "127.0.0.1", RemotePort);
-    auto ansi_str = StringCast<ANSICHAR>(*address_string);
-    remote_address.data = (void*)ansi_str.Get();
-    remote_address.size = ansi_str.Length();
-    
+    FString AddressString = FString::Printf(TEXT("127.0.0.1:%d"), RemotePort);
+    auto Anistr = StringCast<ANSICHAR>(*AddressString);
+
+    GekkoNetAddress RemoteAddress;
+    RemoteAddress.data = (void*)Anistr.Get();
+    RemoteAddress.size = Anistr.Length();
 
     for (int i = 0; i < config.num_players; i++) {
         const bool is_local_player = (i == PlayerNumber);
@@ -60,13 +59,23 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config)
             PlayerHandle = gekko_add_actor(Session, GekkoLocalPlayer, NULL);
             gekko_set_local_delay(Session, PlayerHandle, DEFAULT_INPUT_DELAY);
         } else {
-            gekko_add_actor(Session, GekkoRemotePlayer, &remote_address);
+            gekko_add_actor(Session, GekkoRemotePlayer, &RemoteAddress);
         }
     }
     
     SessionState = EGekkoSessionState::Connecting;
 }
 
+
+void UGekkoNetSubsystem::ShutdownGekko()
+{
+    if (Session != nullptr)
+    {
+        gekko_destroy(&Session);
+        gekko_default_adapter_destroy();
+        SessionState = EGekkoSessionState::Idling;
+    }
+}
 
 void UGekkoNetSubsystem::UpdateNetplay()
 {
@@ -81,12 +90,7 @@ void UGekkoNetSubsystem::UpdateNetplay()
         RunNetplay();
         break;
     case EGekkoSessionState::Exiting:
-        if (Session != nullptr)
-        {
-            gekko_destroy(&Session);
-            gekko_default_adapter_destroy();
-            SessionState = EGekkoSessionState::Idling;
-        }
+        ShutdownGekko();
         break;
     }
 }

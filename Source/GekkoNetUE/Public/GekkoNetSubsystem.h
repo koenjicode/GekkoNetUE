@@ -27,7 +27,8 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 public:
 	
 	void StartGekko(FGekkoSessionConfig config);
-	
+	void ShutdownGekko();
+
 	void UpdateNetplay();
 	void RunNetplay();
 	
