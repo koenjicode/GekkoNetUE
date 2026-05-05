@@ -150,25 +150,33 @@ void UGekkoNetSubsystem::ProcessSession()
         switch (Ev->type)
         {
         case GekkoPlayerSyncing:
-            const int sync_handle = Ev->data.syncing.handle;
-            UE_LOG(LogGekkoNet, Log, TEXT("Player %d is syncing.", sync_handle));
-            OnPlayerSyncing.Broadcast(Ev->data.syncing.handle, Ev->data.syncing.current, Ev->data.syncing.max);
-            break;
+            {
+                const int SyncHandle = Ev->data.syncing.handle;
+                UE_LOG(LogGekkoNet, Log, TEXT("Player %d is syncing."), SyncHandle);
+                OnPlayerSyncing.Broadcast(Ev->data.syncing.handle, Ev->data.syncing.current, Ev->data.syncing.max);
+                break;
+            }
         case GekkoPlayerConnected:
-            const int connected_handle = Ev->data.connected.handle;
-            UE_LOG(LogGekkoNet, Log, TEXT("Player %d has connected.", connected_handle));
-            OnPlayerConnected.Broadcast(Ev->data.connected.handle);
-            break;
+            {
+                const int ConnectedHandle = Ev->data.connected.handle;
+                UE_LOG(LogGekkoNet, Log, TEXT("Player %d has connected."), ConnectedHandle);
+                OnPlayerConnected.Broadcast(Ev->data.connected.handle);
+                break;
+            }
         case GekkoPlayerDisconnected:
-            const int handle = Ev->data.disconnected.handle;
-            UE_LOG(LogGekkoNet, Warning, TEXT("Player %d has disconnected.", handle));
-            HandleDisconnection(Ev);
-            break;
+            {
+                const int DisconnectedHandle = Ev->data.disconnected.handle;
+                UE_LOG(LogGekkoNet, Warning, TEXT("Player %d has disconnected."), DisconnectedHandle);
+                HandleDisconnection(Ev);
+                break;
+            }
         case GekkoSessionStarted:
-            OnSessionStarted.Broadcast();
-            UE_LOG(LogGekkoNet, Log, TEXT("Session started."));
-            SessionState = EGekkoSessionState::Running;
-            break;
+            {
+                OnSessionStarted.Broadcast();
+                UE_LOG(LogGekkoNet, Log, TEXT("Session started."));
+                SessionState = EGekkoSessionState::Running;
+                break;
+            }
         case GekkoSpectatorPaused:
             OnSpectatorPaused.Broadcast(Ev->data.connected.handle);
             break;
@@ -178,11 +186,11 @@ void UGekkoNetSubsystem::ProcessSession()
         case GekkoDesyncDetected:
             {
                 FGekkoDesyncInfo Info;
-                Info.Frame          = Ev->data.desynced.frame;
-                Info.LocalChecksum  = Ev->data.desynced.local_checksum;
+                Info.Frame = Ev->data.desynced.frame;
+                Info.LocalChecksum = Ev->data.desynced.local_checksum;
                 Info.RemoteChecksum = Ev->data.desynced.remote_checksum;
-                Info.RemoteHandle   = Ev->data.desynced.remote_handle;
-                UE_LOG(LogGekkoNet, Warning, TEXT("Desync detected at frame %d", Info.Frame));
+                Info.RemoteHandle = Ev->data.desynced.remote_handle;
+                UE_LOG(LogGekkoNet, Warning, TEXT("Desync detected at frame %d"), Info.Frame);
                 OnDesyncDetected.Broadcast(Info);
                 break;
             }
