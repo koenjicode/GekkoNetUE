@@ -108,7 +108,7 @@ void UGekkoNetSubsystem::UpdateNetplay()
         RunNetplay();
         break;
     case EGekkoSessionState::Exiting:
-        ShutdownGekko(TODO);
+        ShutdownGekko();
         break;
     }
 }
