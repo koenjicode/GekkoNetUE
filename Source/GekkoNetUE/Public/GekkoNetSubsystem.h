@@ -47,8 +47,11 @@ public:
 	UFUNCTION(BlueprintPure)
 	FGekkoSimpleNetworkStats GetNetworkStats() const { return NetStats; }
 	// Returns the advanced network stat information collected from the active session.
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
 	FGekkoFullNetworkStats GetFullNetworkStats() const;
+	// Returns the Player Handle of the connected local player.
+	UFUNCTION(BlueprintPure)
+	int32 GetPlayerHandle() const { return PlayerHandle; };
 	
 	// Set the ID of the player that is connecting to the session.
 	UFUNCTION(BlueprintCallable)
@@ -58,7 +61,8 @@ public:
 	bool SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost);
 	// Set a Player's input delay within the current session.
 	UFUNCTION(BlueprintCallable)
-	bool SetLocalDelay(int32 LocalPlayer, int32 Delay = 1);
+	bool SetLocalDelay(int32 Delay, int32 LocalPlayerIndex);
+	bool SetLocalDelay(int32 Delay = 1);
 	// Set how many frames ahead the simulation should run.
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead = 1);
@@ -124,7 +128,7 @@ private:
 	// delay and runahead
 	
 	int32 LocalDelay = DEFAULT_INPUT_DELAY;
-	int32 LocalRunahead = 0;
+	int32 LocalRunahead;
 	
 	// game simulation
 	

@@ -329,27 +329,30 @@ bool UGekkoNetSubsystem::SetSimulationHost(TScriptInterface<IGekkoNetSimulationI
     return SimHost.GetObject() ? true : false;
 }
 
-bool UGekkoNetSubsystem::SetLocalDelay(int32 LocalPlayer, int32 Delay)
+bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, int32 LocalPlayerIndex)
 {
-    if (Session == nullptr)
-    {
-        return false;
-    }
     LocalDelay = FMath::Max(Delay, 0);
-    gekko_set_local_delay(Session, LocalPlayer, LocalDelay);
-    UE_LOG(LogGekkoNet, Log, TEXT("Gekko Delay has been updated to %d for Player %d."), LocalDelay, LocalPlayer);
+    if (Session != nullptr && LocalPlayerIndex >= 0 && LocalPlayerIndex < NumPlayers)
+    {
+        gekko_set_local_delay(Session, LocalPlayerIndex, LocalDelay);
+        UE_LOG(LogGekkoNet, Log, TEXT("Gekko Delay has been updated to %d for Player %d."), LocalDelay, LocalPlayerIndex);
+    }
     return true;
+}
+
+bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay)
+{
+    return SetLocalDelay(Delay, -1);
 }
 
 bool UGekkoNetSubsystem::SetRunahead(int32 Runahead)
 {
-    if (Session == nullptr)
-    {
-        return false;
-    }
     LocalRunahead = FMath::Max(Runahead, 0);
-    gekko_set_runahead(Session, LocalRunahead);
-    UE_LOG(LogGekkoNet, Log, TEXT("Gekko Runahead has been updated to %d."), LocalRunahead);
+    if (Session != nullptr)
+    {
+        gekko_set_runahead(Session, LocalRunahead);
+        UE_LOG(LogGekkoNet, Log, TEXT("Gekko Runahead has been updated to %d."), LocalRunahead);
+    }
     return false;
 }
 
