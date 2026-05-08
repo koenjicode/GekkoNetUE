@@ -9,9 +9,9 @@ For an example project on implementing GekkoNet please check the [GekkoGameUE](h
 
 ## Prerequisites
 
-Follow the Prerequisites present in the GekkoNet GitHub page.
-The GekkoNet requires SDL3 to be installed, SDL3 is automatically collected if you have vcpkg installed. If you're running into build issues, this is most likely the culprit.
-You'll also need to build place the `GEKKONET_STATIC.lib` files into your GekkoNet/Binaries/Win64 folder.
+- Follow the Prerequisites present in the GekkoNet GitHub page.
+- The GekkoNet requires SDL3 to be installed, SDL3 is automatically collected if you have vcpkg installed. If you're running into build issues, this is most likely the culprit.
+- You'll also need to build place the `GEKKONET_STATIC.lib` files into your GekkoNet/Binaries/Win64 folder.
 
 ## Setup
 
