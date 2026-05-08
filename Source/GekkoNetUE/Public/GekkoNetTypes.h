@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GekkoNetTypes.generated.h"
@@ -116,25 +114,18 @@ struct FGekkoSessionConfig
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	int32 NumPlayers = 2;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	int32 MaxSpectators = 0;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	int32 InputPredictionWindow = 8;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Spectator")
 	int32 SpectatorDelay = 0;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	int32 InputSize = 0;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	int32 StateSize = 0;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
 	bool bLimitedSaving = false;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Stress")
 	int32 CheckDistance = 0;
 };
