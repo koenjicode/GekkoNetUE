@@ -25,8 +25,8 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 public:
 	// Start the GekkoNet session based on the provided configuration and host.
 	UFUNCTION(BlueprintCallable)
-	void StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost, int32 PlayerIndex = -1);
-	void StartGekko(FGekkoSessionConfig Config, int32 PlayerIndex = -1);
+	void StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost, int32 InIndex = -1, int32 InLocalPort = 50000, FString InRemoteAddress = "192.168.0.1:50001");
+	void StartGekko(FGekkoSessionConfig Config, int32 InIndex = -1, int32 InLocalPort = 50000, FString InRemoteAddress = "192.168.0.1:50001");
 	// Shuts down an active GekkoNet session if running.
 	UFUNCTION(BlueprintCallable)
 	void ShutdownGekko();

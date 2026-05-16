@@ -12,6 +12,7 @@ public class GekkoNetUE : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"GekkoNet",
+			"UnrealEd",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

@@ -1,13 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GekkoNetSubsystem.h"
+
+#include "GekkoNetLocalAdapter.h"
 #include "GekkoNetLog.h"
 #include "GekkoNetSimulationInterface.h"
 
 #define STATS_UPDATE_TIMER_MAX 60
 #define FRAME_SKIP_TIMER_MAX 60
 
-void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost, int32 PlayerIndex)
+void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface<IGekkoNetSimulationInterface> NewHost,
+    int32 InIndex, int32 InLocalPort, FString InRemoteAddress)
 {
     if (Config.NumPlayers < 2 || Config.InputSize <= 0 || Config.StateSize <= 0)
     {
@@ -27,12 +30,12 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
 
     if (PlayerID < 0)
     {
-        if (PlayerIndex < 0 || PlayerIndex > Config.NumPlayers)
+        if (InIndex < 0 || InIndex > Config.NumPlayers)
         {
             UE_LOG(LogGekkoNet, Error, TEXT("Invalid player index chosen, failed to start session."));
             return;
         }
-        PlayerID = PlayerIndex;
+        PlayerID = InIndex;
     }
     
     GekkoConfig GekkoConfig = {};
@@ -57,43 +60,43 @@ void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, TScriptInterface
         return;
     }
     
-    if (PlayerID == 0)
+    FString AddressString;
+    if (GEditor && GEditor->PlayWorld)
     {
-        LocalPort = 50000;
-        RemotePort = 50001;
+        gekko_net_adapter_set(Session, GekkoNetLocalAdapter::GetLocalAdapter(PlayerID));
+        UE_LOG(LogGekkoNet, Log, TEXT("Started a local session for player %d"), PlayerID);
+        
+        AddressString = (PlayerID == 0)
+        ? TEXT("Player2")
+        : TEXT("Player1");
+        
     }
     else
     {
-        LocalPort = 50001;
-        RemotePort = 50000;
+        gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
+        UE_LOG(LogGekkoNet, Log, TEXT("Starting a session for player %d at port %hu\n"), PlayerID, InLocalPort);
+        AddressString = InRemoteAddress;
     }
-    
-    gekko_net_adapter_set(Session, gekko_default_adapter(LocalPort));
-    
-    UE_LOG(LogGekkoNet, Log, TEXT("Starting a session for player %d at port %hu\n"), PlayerID, LocalPort);
-            
-    FString AddressString = FString::Printf(TEXT("127.0.0.1:%d"), RemotePort);
     auto Anistr = StringCast<ANSICHAR>(*AddressString);
 
-    GekkoNetAddress RemoteAddress;
-    RemoteAddress.data = (void*)Anistr.Get();
-    RemoteAddress.size = Anistr.Length();
+    GekkoNetAddress NetAddress;
+    NetAddress.data = (void*)Anistr.Get();
+    NetAddress.size = Anistr.Length();
 
     for (int i = 0; i < GekkoConfig.num_players; i++) {
-        const bool LocalPlayer = (i == PlayerID);
-        if (LocalPlayer) {
+        if (i == PlayerID) {
             PlayerHandle = gekko_add_actor(Session, GekkoLocalPlayer, NULL);
             gekko_set_local_delay(Session, PlayerHandle, LocalDelay);
         } else {
-            gekko_add_actor(Session, GekkoRemotePlayer, &RemoteAddress);
+            gekko_add_actor(Session, GekkoRemotePlayer, &NetAddress);
         }
     }
     SessionState = EGekkoSessionState::Connecting;
 }
 
-void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, int32 PlayerIndex)
+void UGekkoNetSubsystem::StartGekko(FGekkoSessionConfig Config, int32 InIndex, int32 InLocalPort, FString InRemoteAddress)
 {
-    StartGekko(Config, nullptr, PlayerIndex);
+    StartGekko(Config, nullptr, InIndex, InLocalPort, InRemoteAddress);
 }
 
 void UGekkoNetSubsystem::ShutdownGekko()
