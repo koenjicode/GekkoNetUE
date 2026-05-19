@@ -4,25 +4,13 @@
 #include "GekkoNetTypes.generated.h"
 
 #define DEFAULT_INPUT_DELAY 1
-#define FRAME_MAX_ROLLBACK 9
+#define MAX_INPUT_DELAY 8
 
 UENUM()
 enum class EGekkoSessionState : uint8
 {
-	Idling			UMETA(DisplayName = "Session Idle"),
-	Transitioning	UMETA(DisplayName = "Session Transitioning"),
-	Connecting		UMETA(DisplayName = "Session Connecting"),
-	Running			UMETA(DisplayName = "Session Running"),
-	Exiting			UMETA(DisplayName = "Session Exiting"),
-};
-
-UENUM(BlueprintType)
-enum class EGekkoTransportType : uint8
-{
-	LocalOnly,
-	RawIP,
-	EOS,
-	Steam,
+	Inactive,
+	Running,
 };
 
 UENUM(BlueprintType)
@@ -74,58 +62,36 @@ struct FGekkoDesyncInfo
 	UPROPERTY(BlueprintReadOnly, Category = "GekkoNet") int32 RemoteHandle = 0;
 };
 
-USTRUCT(BlueprintType)
-struct FGekkoRemoteData
+USTRUCT()
+struct FGekkoPeer
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString Address;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 RemotePort = INDEX_NONE;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString PlatformUserId;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString SocketId;
+	UPROPERTY()
+	FName Nickname;
 };
 
 USTRUCT(BlueprintType)
-struct FGekkoPlayerPeer
+struct FGekkoConfig
 {
 	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EGekkoPlayerType PlayerType = EGekkoPlayerType::LocalPlayer;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Local", meta=(EditCondition="PlayerType == EGekkoPlayerType::LocalPlayer", EditConditionHides))
-	int32 LocalInputDelay = DEFAULT_INPUT_DELAY;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Remote", meta=(EditCondition="PlayerType == EGekkoPlayerType::RemotePlayer", EditConditionHides))
-	FGekkoRemoteData RemoteInfo;
-};
 
-USTRUCT(BlueprintType)
-struct FGekkoSessionConfig
-{
-	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
-	int32 NumPlayers = 2;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
-	int32 MaxSpectators = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
-	int32 InputPredictionWindow = 8;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Spectator")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 NumPlayers = 2;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 MaxSpectators = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	uint8 InputPredictionWindow = DEFAULT_INPUT_DELAY;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 SpectatorDelay = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 InputSize = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 StateSize = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bLimitedSaving = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GekkoNet|Stress")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDesyncDetection = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CheckDistance = 0;
 };

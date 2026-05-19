@@ -21,9 +21,8 @@ class GEKKONETUE_API IGekkoNetSimulationInterface
 
 public:
 	
-	virtual void GekkoGetLocalInputs(void* OutInputData) = 0;
+	virtual void GekkoGetLocalInput(int32 LocalPlayer, void* OutInputData) = 0;
 	virtual void GekkoSave(GekkoGameEvent* Event) = 0;
 	virtual void GekkoLoad(GekkoGameEvent* Event) = 0;
-	virtual void GekkoAdvance(GekkoGameEvent* Event, bool Render) = 0;
-	virtual void GekkoDisconnect(GekkoSessionEvent* Event) = 0;
+	virtual void GekkoAdvance(GekkoGameEvent* Event) = 0;
 };
