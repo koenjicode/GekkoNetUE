@@ -4,6 +4,7 @@
 #include "GekkoNetLocalAdapter.h"
 #include "GekkoNetLog.h"
 #include "GekkoNetSimulationInterface.h"
+#include "GekkoNetUnrealAdapter.h"
 
 #define STATS_UPDATE_TIMER_MAX 60
 #define FRAME_SKIP_TIMER_MAX 60
@@ -44,8 +45,6 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, int32 InLocalPort, 
     if (InLocalPort == 0)
         return;
     
-    bool bPlayInEditor = GEditor && GEditor->PlayWorld;
-    
     FMemory::Memzero(&Config, sizeof(Config));
     Config.num_players = InConfig.NumPlayers;
     Config.check_distance = InConfig.CheckDistance;
@@ -67,15 +66,25 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, int32 InLocalPort, 
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
     
-    if (bPlayInEditor)
+    if (IsPlayInEditor())
     {
         gekko_net_adapter_set(Session, GekkoNetLocalAdapter::GetLocalAdapter(LocalAdapterID));
         UE_LOG(LogGekkoNet, Log, TEXT("Started a local PIE session for player %d"), LocalAdapterID);
     }
     else
     {
-        gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
-        UE_LOG(LogGekkoNet, Log, TEXT("Starting a session at port %hu\n"), InLocalPort);
+        switch (TransportType)
+        {
+        case EGekkoTransportType::Asio:
+            gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
+            break;
+        case EGekkoTransportType::Unreal:
+            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(InLocalPort));
+            break;
+        }
+        const UEnum* Enum = StaticEnum<EGekkoTransportType>();
+        FString Name = Enum->GetNameStringByValue((int64)TransportType);
+        UE_LOG(LogGekkoNet, Log, TEXT("Started a session at port %hu using %s sockets."), InLocalPort, *Name);
     }
     SessionState = EGekkoSessionState::Running;
 }
@@ -85,16 +94,22 @@ void UGekkoNetSubsystem::EndSession()
     if (Session == nullptr)
         return;
     
-    bool bPlayInEditor = GEditor && GEditor->PlayWorld;
-    
     gekko_destroy(&Session);
-    if (bPlayInEditor)
+    if (IsPlayInEditor())
     {
         GekkoNetLocalAdapter::EmptyAddresses();
     }
     else
     {
-        gekko_default_adapter_destroy();
+        switch (TransportType)
+        {
+        case EGekkoTransportType::Asio:
+            gekko_default_adapter_destroy();
+            break;
+        case EGekkoTransportType::Unreal:
+            FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
+            break;
+        }
     }
     
     SessionState = EGekkoSessionState::Inactive;
@@ -121,26 +136,34 @@ bool UGekkoNetSubsystem::IsSessionRunning() const
 
 void UGekkoNetSubsystem::RunSession()
 {
-    // Check if we need to catch up and frame skip timer hasn't triggered
-    // if the FrameSkipTimer has updated we refrain from forcing another frame skip until we should.
-    const bool CatchUp = NeedToCatchUp() && (FrameSkipTimer == 0);
+    const bool CatchUp = NeedToCatchUp() && FrameSkipTimer == 0;
     StepLogic();
     
-    // run an additional frame if we need to catch up.
-    if (CatchUp) {
-        StepLogic();
-        FrameSkipTimer = FRAME_SKIP_TIMER_MAX;
+    if (CatchUp) 
+    {
+        const int32 FramesToSkip = FMath::Min(FramesAllowedToSkip, FramesBehind);
+        for (int i = 0; i < FramesToSkip; ++i)
+        {
+            StepLogic(); 
+        }
+        FrameSkipTimer = FrameSkipTimerMax;
     }
 
     FrameSkipTimer -= 1;
     FrameSkipTimer = FMath::Max(FrameSkipTimer, 0);
 }
 
+bool UGekkoNetSubsystem::IsPlayInEditor() const
+{
+    if (!GEditor)
+        return false;
+    
+    return GEditor->PlayWorld && !bDisablePlayInEditorAdapters;
+}
+
 void UGekkoNetSubsystem::HandleDisconnection(GekkoSessionEvent* Ev)
 {
     FramesBehind = -gekko_frames_ahead(Session);
-    
-    
     OnPlayerDisconnected.Broadcast(Ev->data.disconnected.handle);
     
     EndSession();
@@ -272,28 +295,19 @@ void UGekkoNetSubsystem::ProcessEvents()
 
 FGekkoSimpleNetworkStats UGekkoNetSubsystem::UpdateNetworkStats(int32 Player)
 {
-    if (StatsUpdateTimer == 0) {
-        GekkoNetworkStats GNetStats;
-        gekko_network_stats(Session, Player, &GNetStats);
+    GekkoNetworkStats GNetStats;
+    gekko_network_stats(Session, Player, &GNetStats);
 
-        NetStats.Ping = GNetStats.avg_ping;
-        NetStats.Delay = LocalDelay;
+    NetStats.Ping = GNetStats.avg_ping;
+    NetStats.Delay = LocalDelay;
 
-        if (FrameMaxRollback < NetStats.Rollback) {
-            // Don't decrease the reading by more than a frame to account for
-            // the opponent not pressing buttons for 1-2 seconds
-            NetStats.Rollback -= 1;
-        } else {
-            NetStats.Rollback = FrameMaxRollback;
-        }
-
-        FrameMaxRollback = 0;
-        StatsUpdateTimer = STATS_UPDATE_TIMER_MAX;
+    if (FrameMaxRollback < NetStats.Rollback) {
+        NetStats.Rollback -= 1;
+    } else {
+        NetStats.Rollback = FrameMaxRollback;
     }
-
-    StatsUpdateTimer -= 1;
-    StatsUpdateTimer =  FMath::Max(StatsUpdateTimer, 0);
     
+    FrameMaxRollback = 0;
     return NetStats;
 }
 
@@ -314,6 +328,11 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
 void UGekkoNetSubsystem::SetLocalAdapter(int32 Index)
 {
     LocalAdapterID = Index;
+}
+
+void UGekkoNetSubsystem::SetTransportType(EGekkoTransportType Type)
+{
+    TransportType = Type;
 }
 
 bool UGekkoNetSubsystem::SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost)

@@ -53,6 +53,8 @@ public:
 	
 	// Set the local adapter that will be used in PlayInEditor scenarios.
 	void SetLocalAdapter(int32 Index);
+	// Set the type of socket that will be used to transfer data between connected clients.
+	void SetTransportType(EGekkoTransportType Type);
 	// Set the simulation host that will be used with GekkoNet.
 	UFUNCTION(BlueprintCallable)
 	bool SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost);
@@ -71,10 +73,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorUnpaused;
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoDesyncEvent OnDesyncDetected;
 	
+
 private:
 	// subsystem functions
 	
 	void RunSession();
+	bool IsPlayInEditor() const;
 	
 	void HandleDisconnection(GekkoSessionEvent* Ev);
 	
@@ -87,43 +91,37 @@ private:
 	bool NeedToCatchUp() const;
 	
 	// Editor Only
-	int32 LocalAdapterID;
+	bool bDisablePlayInEditorAdapters = false;
+	int32 LocalAdapterID = 0;
+	
 	
 	FGekkoSimpleNetworkStats NetStats;
-	
-	int32 StatsUpdateTimer;
-	int32 FrameMaxRollback;
-	
-	// local networking
-	// TODO: store remoteports as remote addresses to better accomodate for multiple players entering.
-	
-	int32 LocalPort = INDEX_NONE;
-	int32 RemotePort = INDEX_NONE;
 	
 	// session and stored session data
 	
 	GekkoSession* Session;
 	EGekkoSessionState SessionState;
+	EGekkoTransportType TransportType = EGekkoTransportType::Asio;
 	
 	TArray<int32> LocalPlayerIDs;
 	
 	// frames skipping and frames behind
 	
-	int32 FrameSkipTimer;
-	int32 FramesBehind;
-	int32 TransitionReadyFrames;
+	int32 FrameMaxRollback = 0;
+	int32 FrameSkipTimerMax = 60;
+	int32 FramesAllowedToSkip = 1;
+	int32 FrameSkipTimer = 0;
+	int32 FramesBehind = 0;
 	
 	// delay and runahead
 	
 	int32 LocalDelay = DEFAULT_INPUT_DELAY;
 	int32 LocalRunahead;
 	
-	TArray<uint8> LocalInputBuffer;
-	
 	// game simulation
 	
 	UPROPERTY()
 	TScriptInterface<IGekkoNetSimulationInterface> SimHost;
-	
+	TArray<uint8> LocalInputBuffer;
 	GekkoConfig Config;
 };
