@@ -7,6 +7,8 @@ public class GekkoNet : ModuleRules
 	{
 		Type = ModuleType.External;
 
+		bool bWithAsio = true;
+
 		// Path to the submodule root
 		string SubmoduleDir = Path.Combine(ModuleDirectory, "GekkoNet");
 		string IncludeDir   = Path.Combine(SubmoduleDir, "GekkoLib", "include");
@@ -16,26 +18,42 @@ public class GekkoNet : ModuleRules
 		PublicIncludePaths.Add(IncludeDir);
 
 		// Built with GEKKONET_STATIC — no DLL import/export needed
-		PublicDefinitions.Add("GEKKONET_STATIC");
+		if (bWithAsio)
+		{
+			PublicDefinitions.Add("GEKKONET_STATIC");
+		}
+		else
+		{
+			PublicDefinitions.Add("GekkoNet_STATIC_NO_ASIO");
+		}
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			string Win64BinDir = Path.Combine(BinDir, "Win64");
-
-			PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC.lib"));
-
-			// ws2_32 required by ASIO on Windows
-			PublicSystemLibraries.Add("ws2_32.lib");
+			if (bWithAsio)
+			{
+				PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC.lib"));
+			}
+			else
+			{
+				PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC_NO_ASIO.lib"));
+			}
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Linux)
 		{
 			string LinuxBinDir = Path.Combine(BinDir, "Linux");
-			PublicAdditionalLibraries.Add(Path.Combine(LinuxBinDir, "libGekkoNet_STATIC.a"));
+			if (bWithAsio)
+			{
+				PublicAdditionalLibraries.Add(Path.Combine(LinuxBinDir, "libGekkoNet_STATIC.a"));
+			}
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Mac)
 		{
 			string MacBinDir = Path.Combine(BinDir, "Mac");
-			PublicAdditionalLibraries.Add(Path.Combine(MacBinDir, "libGekkoNet_STATIC.a"));
+			if (bWithAsio)
+			{
+				PublicAdditionalLibraries.Add(Path.Combine(MacBinDir, "libGekkoNet_STATIC.a"));
+			}
 		}
 	}
 }
