@@ -51,8 +51,6 @@ public:
 	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
 	FGekkoFullNetworkStats GetFullNetworkStats(int32 Player) const;
 	
-	// Set the local adapter that will be used in PlayInEditor scenarios.
-	void SetLocalAdapter(int32 Index);
 	// Set the type of socket that will be used to transfer data between connected clients.
 	void SetTransportType(EGekkoTransportType Type);
 	// Set the simulation host that will be used with GekkoNet.
@@ -73,12 +71,16 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorUnpaused;
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoDesyncEvent OnDesyncDetected;
 	
+#if WITH_EDITOR
+	// Set the local adapter that will be used in PlayInEditor scenarios.
+	void SetLocalAdapter(int32 Index);
+	#endif
+	
 
 private:
 	// subsystem functions
 	
 	void RunSession();
-	bool IsPlayInEditor() const;
 	
 	void HandleDisconnection(GekkoSessionEvent* Ev);
 	
@@ -90,10 +92,15 @@ private:
 	
 	bool NeedToCatchUp() const;
 	
-	// Editor Only
+#if WITH_EDITOR
+	// Checks whether not the current session was created in PIE.
+	bool IsPlayInEditor() const;
+#endif
+	
+#if WITH_EDITORONLY_DATA
 	bool bDisablePlayInEditorAdapters = false;
 	int32 LocalAdapterID = 0;
-	
+#endif
 	
 	FGekkoSimpleNetworkStats NetStats;
 	

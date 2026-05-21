@@ -1,4 +1,6 @@
-﻿#include "GekkoNetLocalAdapter.h"
+﻿#if WITH_EDITOR
+
+#include "GekkoNetLocalAdapter.h"
 
 static TMap<FString, uint8> AddressMap;
 static TMap<uint8, FString> ReverseAddressMap;
@@ -157,3 +159,6 @@ void GekkoNetLocalAdapter::MapLocalAddress(FString Address, uint8 LocalPlayer)
     AddressMap.Add(Address, LocalPlayer);
     ReverseAddressMap.Add(LocalPlayer, Address);
 }
+
+#endif
+

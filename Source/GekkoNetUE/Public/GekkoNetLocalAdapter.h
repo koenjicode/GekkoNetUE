@@ -1,11 +1,6 @@
 ﻿#pragma once
+#if WITH_EDITOR
 #include "gekkonet.h"
-
-struct FPlayerAddressInfo
-{
-	FString Address;
-	int32 Index;
-};
 
 class GekkoNetLocalAdapter
 {
@@ -15,3 +10,4 @@ public:
 	
 	static void MapLocalAddress(FString Address, uint8 LocalPlayer);
 };
+#endif

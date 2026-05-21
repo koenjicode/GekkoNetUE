@@ -14,7 +14,6 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
     if (Session == nullptr)
         return -1;
     
-    bool bPlayInEditor = GEditor && GEditor->PlayWorld;
     auto Type = static_cast<GekkoPlayerType>(PlayerType);
     
     int32 ActorID;
@@ -32,10 +31,12 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
             (unsigned int)Convert.Length()
         };
         ActorID = gekko_add_actor(Session, Type, &Remote);
-        if (bPlayInEditor)
+#if WITH_EDITOR
+        if (IsPlayInEditor())
         {
             GekkoNetLocalAdapter::MapLocalAddress(Address, ActorID);
         }
+#endif
     }
     return ActorID;
 }
@@ -65,18 +66,19 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, int32 InLocalPort, 
     }
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
-    
+#if WITH_EDITOR
     if (IsPlayInEditor())
     {
         gekko_net_adapter_set(Session, GekkoNetLocalAdapter::GetLocalAdapter(LocalAdapterID));
         UE_LOG(LogGekkoNet, Log, TEXT("Started a local PIE session for player %d"), LocalAdapterID);
     }
     else
+#endif
     {
         switch (TransportType)
         {
         case EGekkoTransportType::Asio:
-            gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
+            // gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
             break;
         case EGekkoTransportType::Unreal:
             gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(InLocalPort));
@@ -95,16 +97,18 @@ void UGekkoNetSubsystem::EndSession()
         return;
     
     gekko_destroy(&Session);
+#if WITH_EDITOR
     if (IsPlayInEditor())
     {
         GekkoNetLocalAdapter::EmptyAddresses();
     }
     else
+#endif
     {
         switch (TransportType)
         {
         case EGekkoTransportType::Asio:
-            gekko_default_adapter_destroy();
+            // gekko_default_adapter_destroy();
             break;
         case EGekkoTransportType::Unreal:
             FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
@@ -153,6 +157,7 @@ void UGekkoNetSubsystem::RunSession()
     FrameSkipTimer = FMath::Max(FrameSkipTimer, 0);
 }
 
+#if WITH_EDITOR
 bool UGekkoNetSubsystem::IsPlayInEditor() const
 {
     if (!GEditor)
@@ -160,6 +165,8 @@ bool UGekkoNetSubsystem::IsPlayInEditor() const
     
     return GEditor->PlayWorld && !bDisablePlayInEditorAdapters;
 }
+#endif
+
 
 void UGekkoNetSubsystem::HandleDisconnection(GekkoSessionEvent* Ev)
 {
@@ -325,10 +332,12 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
     return FullNetStats;
 }
 
+#if WITH_EDITOR
 void UGekkoNetSubsystem::SetLocalAdapter(int32 Index)
 {
     LocalAdapterID = Index;
 }
+#endif
 
 void UGekkoNetSubsystem::SetTransportType(EGekkoTransportType Type)
 {

@@ -12,7 +12,6 @@ public class GekkoNetUE : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"GekkoNet",
-			"UnrealEd",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -20,5 +19,15 @@ public class GekkoNetUE : ModuleRules
 			"Sockets",
 			"Networking"
 		});
+		
+		if (Target.bBuildEditor == true)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"UnrealEd"
+				}
+			);
+		}
 	}
 }
