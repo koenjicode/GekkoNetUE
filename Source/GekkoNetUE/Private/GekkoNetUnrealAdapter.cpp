@@ -1,56 +1,66 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "GekkoNetUnrealAdapter.h"
 
-
-#include "GekkoNetUnrealAdapter.h"
+#include "GekkoNetLog.h"
 #include "Common/UdpSocketBuilder.h"
 
-static FSocket* GekkoSocket = nullptr;
+static FSocket* UnrealSocket = nullptr;
+static uint8 Buffer[1024];
+static TArray<GekkoNetResult*> Results;
 
 static void UE_SendData(GekkoNetAddress* Addr, const char* Data, int Length)
 {
-    // Addr->data is the address string e.g. "127.0.0.1:7000"
-    // Parse it and send via UE socket
     FString AddressStr(Addr->size, (char*)Addr->data);
+    if (AddressStr.IsEmpty())
+    {
+        return;
+    }
     
-    ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-    TSharedRef<FInternetAddr> Dest = SocketSub->CreateInternetAddr();
-    bool bValid;
-    Dest->SetIp(*AddressStr, bValid);
+    TSharedRef<FInternetAddr> RemoteAddr = ISocketSubsystem::Get()->CreateInternetAddr();
+    bool bIsValid = false;
+    
+    RemoteAddr->SetIp(*AddressStr, bIsValid);
+    if (!bIsValid)
+    {
+        return;
+    }
     
     int32 BytesSent = 0;
-    GekkoSocket->SendTo((uint8*)Data, Length, BytesSent, *Dest);
+    UnrealSocket->SendTo((uint8*)Data, Length, BytesSent, *RemoteAddr);
 }
 
 static GekkoNetResult** UE_ReceiveData(int* OutLength)
 {
-    // Poll socket for all pending packets
-    static TArray<GekkoNetResult*> Results;
     Results.Reset();
 
     uint32 PendingSize = 0;
-    while (GekkoSocket->HasPendingData(PendingSize))
+    while (UnrealSocket->HasPendingData(PendingSize))
     {
-        GekkoNetResult* Result = (GekkoNetResult*)FMemory::Malloc(sizeof(GekkoNetResult));
-        Result->data = FMemory::Malloc(PendingSize);
-        Result->data_len = PendingSize;
-
-        TSharedRef<FInternetAddr> SenderAddr = 
-            ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+        TSharedRef<FInternetAddr> SenderAddr = ISocketSubsystem::Get()->CreateInternetAddr();
         int32 BytesRead = 0;
-        GekkoSocket->RecvFrom((uint8*)Result->data, PendingSize, BytesRead, *SenderAddr);
-        Result->data_len = BytesRead;
-
+        const bool bSuccess = UnrealSocket->RecvFrom(Buffer, sizeof(Buffer), BytesRead, *SenderAddr);
+        if (!bSuccess || BytesRead <= 0)
+        {
+            continue;
+        }
+        GekkoNetResult* Res = reinterpret_cast<GekkoNetResult*>(FMemory::Malloc(sizeof(GekkoNetResult)));
+        
+        Res->data_len = BytesRead;
+        Res->data = FMemory::Malloc(BytesRead);
+        FMemory::Memcpy(Res->data, Buffer, BytesRead);
+        
         FString AddrStr = SenderAddr->ToString(true);
-        char* AddrData = (char*)FMemory::Malloc(AddrStr.Len());
-        FMemory::Memcpy(AddrData, TCHAR_TO_ANSI(*AddrStr), AddrStr.Len());
-        Result->addr.data = AddrData;
-        Result->addr.size = AddrStr.Len();
+        
+        FTCHARToUTF8 AddrUtf8(*AddrStr);
+        char* AddrData = (char*)FMemory::Malloc(AddrUtf8.Length());
+        FMemory::Memcpy(AddrData,AddrUtf8.Get(),AddrUtf8.Length());
+        Res->addr.data = AddrData;
+        Res->addr.size = AddrUtf8.Length();
 
-        Results.Add(Result);
+        Results.Add(Res);
     }
-
+    
     *OutLength = Results.Num();
-    return Results.Num() > 0 ? Results.GetData() : nullptr;
+    return Results.GetData();
 }
 
 static void UE_FreeData(void* DataPtr)
@@ -58,7 +68,7 @@ static void UE_FreeData(void* DataPtr)
     FMemory::Free(DataPtr);
 }
 
-static GekkoNetAdapter UEGekkoAdapter{
+static GekkoNetAdapter UE_DefaultSocket{
     UE_SendData,
     UE_ReceiveData,
     UE_FreeData
@@ -66,31 +76,31 @@ static GekkoNetAdapter UEGekkoAdapter{
 
 GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(int32 Port)
 {
-    if (GekkoSocket)
+    if (UnrealSocket)
     {
         UE_Gekko_Adapter_Destroy();
     }
 
-    GekkoSocket = FUdpSocketBuilder(TEXT("GekkoNetSocket"))
-        .AsNonBlocking()
-        .AsReusable()
-        .BoundToPort(Port)
-        .Build();
-
-    if (!GekkoSocket)
+    UnrealSocket = FUdpSocketBuilder(TEXT("UnrealGekko"))
+    .AsNonBlocking()
+    .AsReusable()
+    .BoundToPort(Port)
+    .Build();
+    
+    if (!UnrealSocket)
     {
+        UE_LOG(LogGekkoNet, Error, TEXT("Unreal Socket was unable to be created for GekkoNet for port %d!"), Port);
         return nullptr;
     }
-
-    return &UEGekkoAdapter;
+    return &UE_DefaultSocket;
 }
 
 void FGekkoNetAdapter::UE_Gekko_Adapter_Destroy()
 {
-    if (GekkoSocket)
+    if (UnrealSocket)
     {
-        GekkoSocket->Close();
-        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(GekkoSocket);
-        GekkoSocket = nullptr;
+        UnrealSocket->Close();
+        ISocketSubsystem::Get()->DestroySocket(UnrealSocket);
+        UnrealSocket = nullptr;
     }
 }
