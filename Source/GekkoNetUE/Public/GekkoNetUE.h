@@ -7,4 +7,6 @@ class FGekkoNetUEModule : public IModuleInterface
 public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+	
+	void* GekkoNetHandle;
 };

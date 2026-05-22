@@ -7,6 +7,7 @@ public class GekkoNet : ModuleRules
 	{
 		Type = ModuleType.External;
 
+		bool bStaticLinking = false;
 		bool bWithAsio = true;
 
 		// Path to the submodule root
@@ -18,26 +19,44 @@ public class GekkoNet : ModuleRules
 		PublicIncludePaths.Add(IncludeDir);
 
 		// Built with GEKKONET_STATIC — no DLL import/export needed
-		if (bWithAsio)
+		if (bStaticLinking)
 		{
-			PublicDefinitions.Add("GEKKONET_STATIC");
-		}
-		else
-		{
-			PublicDefinitions.Add("GekkoNet_STATIC_NO_ASIO");
+			if (bWithAsio)
+			{
+				PublicDefinitions.Add("GEKKONET_STATIC");
+			}
+			else
+			{
+				PublicDefinitions.Add("GekkoNet_STATIC_NO_ASIO");
+			}
 		}
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			string Win64BinDir = Path.Combine(BinDir, "Win64");
-			if (bWithAsio)
+			if (bStaticLinking)
 			{
-				PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC.lib"));
+				if (bWithAsio)
+				{
+					PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC.lib"));
+				}
+				else
+				{
+					PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC_NO_ASIO.lib"));
+				}
 			}
 			else
 			{
-				PublicAdditionalLibraries.Add(Path.Combine(Win64BinDir, "GekkoNet_STATIC_NO_ASIO.lib"));
+				// Add the import library
+				PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "Binaries", "Win64", "GekkoNet.lib"));
+
+				// Delay-load the DLL, so we can load it from the right place first
+				PublicDelayLoadDLLs.Add("GekkoNet.dll");
+
+				// Ensure that the DLL is staged along with the executable
+				RuntimeDependencies.Add("$(PluginDir)/Binaries/Win64/GekkoNet.dll");
 			}
+			
 		}
 		else if (Target.Platform == UnrealTargetPlatform.Linux)
 		{
