@@ -27,7 +27,7 @@ public:
 	int32 AddActor(EGekkoPlayerType PlayerType = EGekkoPlayerType::LocalPlayer, FString Address = "");
 	// Start the GekkoNet session based on the provided configuration and host.
 	UFUNCTION(BlueprintCallable)
-	void StartSession(FGekkoConfig InConfig, int32 InLocalPort, bool IsSpectator);
+	void StartSession(FGekkoConfig InConfig, bool IsSpectator);
 	// Shuts down an active GekkoNet session if running.
 	UFUNCTION(BlueprintCallable)
 	void EndSession();
@@ -51,6 +51,7 @@ public:
 	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
 	FGekkoFullNetworkStats GetFullNetworkStats(int32 Player) const;
 	
+	void SetLocalPort(int32 NewLocalPort);
 	// Set the type of socket that will be used to transfer data between connected clients.
 	void SetTransportType(EGekkoTransportType Type);
 	// Set the simulation host that will be used with GekkoNet.
@@ -111,6 +112,7 @@ private:
 	EGekkoTransportType TransportType = EGekkoTransportType::Asio;
 	
 	TArray<int32> LocalPlayerIDs;
+	int32 LocalPort = 7000;
 	
 	// frames skipping and frames behind
 	

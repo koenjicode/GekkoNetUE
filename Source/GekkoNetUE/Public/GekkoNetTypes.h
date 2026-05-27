@@ -23,6 +23,8 @@ enum class EGekkoTransportType : uint8
 	Asio UMETA(DisplayName = "Use Asio Sockets"),
 	// Uses an Unreal based adapter that was created for GekkoNetUE, useful if building with ASIO is disabled.
 	Unreal UMETA(DisplayName = "Use Unreal Sockets"),
+	// Uses an Unreal based adapter that was created for GekkoNetUE, useful if building with ASIO is disabled.
+	Steam UMETA(DisplayName = "Use Steam Sockets"),
 };
 
 UENUM(BlueprintType)

@@ -4,6 +4,7 @@
 #include "GekkoNetLocalAdapter.h"
 #include "GekkoNetLog.h"
 #include "GekkoNetSimulationInterface.h"
+#include "GekkoNetSteamAdapter.h"
 #include "GekkoNetUnrealAdapter.h"
 
 #define STATS_UPDATE_TIMER_MAX 60
@@ -41,10 +42,8 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
     return ActorID;
 }
 
-void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, int32 InLocalPort, bool IsSpectator)
+void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
 {
-    if (InLocalPort == 0)
-        return;
     
     FMemory::Memzero(&Config, sizeof(Config));
     Config.num_players = InConfig.NumPlayers;
@@ -78,15 +77,25 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, int32 InLocalPort, 
         switch (TransportType)
         {
         case EGekkoTransportType::Asio:
-            // gekko_net_adapter_set(Session, gekko_default_adapter(InLocalPort));
+            gekko_net_adapter_set(Session, gekko_default_adapter(LocalPort));
             break;
         case EGekkoTransportType::Unreal:
-            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(InLocalPort));
+            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalPort));
+            break;
+        case EGekkoTransportType::Steam:
+            gekko_net_adapter_set(Session, GekkoNetSteamAdapter::Steam_Gekko_Adapter());
             break;
         }
         const UEnum* Enum = StaticEnum<EGekkoTransportType>();
         FString Name = Enum->GetNameStringByValue((int64)TransportType);
-        UE_LOG(LogGekkoNet, Log, TEXT("Started a session at port %hu using %s sockets."), InLocalPort, *Name);
+        if (TransportType != EGekkoTransportType::Steam)
+        {
+            UE_LOG(LogGekkoNet, Log, TEXT("Started a session at port %hu using %s sockets."), LocalPort, *Name);
+        }
+        else
+        {
+            UE_LOG(LogGekkoNet, Log, TEXT("Started a session using %s sockets."), *Name);
+        }
     }
     SessionState = EGekkoSessionState::Running;
 }
@@ -108,10 +117,12 @@ void UGekkoNetSubsystem::EndSession()
         switch (TransportType)
         {
         case EGekkoTransportType::Asio:
-            // gekko_default_adapter_destroy();
+            gekko_default_adapter_destroy();
             break;
         case EGekkoTransportType::Unreal:
             FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
+            break;
+        case EGekkoTransportType::Steam:
             break;
         }
     }
@@ -330,6 +341,11 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
     FullNetStats.KbSent = GNetStats.kb_sent;
     
     return FullNetStats;
+}
+
+void UGekkoNetSubsystem::SetLocalPort(int32 NewLocalPort)
+{
+    LocalPort = NewLocalPort;
 }
 
 #if WITH_EDITOR
