@@ -225,7 +225,7 @@ void UGekkoNetSubsystem::ProcessSession()
         case GekkoPlayerSyncing:
             {
                 const int SyncHandle = Ev->data.syncing.handle;
-                UE_LOG(LogGekkoNet, Log, TEXT("Player %d is syncing."), SyncHandle);
+                UE_LOG(LogGekkoNet, Verbose, TEXT("Player %d is syncing."), SyncHandle);
                 OnPlayerSyncing.Broadcast(Ev->data.syncing.handle, Ev->data.syncing.current, Ev->data.syncing.max);
                 break;
             }
@@ -288,13 +288,13 @@ void UGekkoNetSubsystem::ProcessEvents()
         case GekkoSaveEvent:
             {
                 SimHost->GekkoSave(Ev);
-                // UE_LOG(LogGekkoNet, Log, TEXT("Gekko save called! (Frame:%d Checksum:0x%08X"), Ev->data.save.frame, *Ev->data.save.checksum);
+                UE_LOG(LogGekkoNet, VeryVerbose, TEXT("Gekko save called! Frame:%d Checksum:0x%08X"), Ev->data.save.frame, *Ev->data.save.checksum);
                 break;
             }
         case GekkoLoadEvent:
             {
                 SimHost->GekkoLoad(Ev);
-                // UE_LOG(LogGekkoNet, Log, TEXT("Gekko load called! (Frame:%d"), Ev->data.load.frame);
+                UE_LOG(LogGekkoNet, VeryVerbose, TEXT("Gekko load called! Frame:%d"), Ev->data.load.frame);
                 break;
             }
         case GekkoAdvanceEvent:
@@ -302,6 +302,7 @@ void UGekkoNetSubsystem::ProcessEvents()
                 const bool rolling_back = Ev->data.adv.rolling_back;
                 SimHost->GekkoAdvance(Ev);
                 FramesRolledBack += rolling_back ? 1 : 0;
+                UE_LOG(LogGekkoNet, VeryVerbose, TEXT("Gekko Advance called Frame:%d"), Ev->data.adv.frame);
                 break;
             }
         default:
