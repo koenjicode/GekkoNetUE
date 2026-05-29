@@ -56,7 +56,7 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     Config.spectator_delay = InConfig.SpectatorDelay;
     Config.state_size = InConfig.StateSize;
     
-    if (gekko_create(&Session, IsSpectator ? GekkoSpectateSession : GekkoGameSession)) {
+    if (gekko_create    (&Session, IsSpectator ? GekkoSpectateSession : GekkoGameSession)) {
         gekko_start(Session, &Config);
     } else
     {
