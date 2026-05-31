@@ -68,9 +68,15 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     }
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
-    
-    // gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint));
-    gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+
+    if (!bUseAsioTransport)
+    {
+        gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint));
+    }
+    else
+    {
+        gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+    }
     
     SessionState = EGekkoSessionState::Running;
 }
@@ -81,9 +87,15 @@ void UGekkoNetSubsystem::EndSession()
         return;
     
     gekko_destroy(&Session);
-    
-    // FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
-    gekko_default_adapter_destroy();
+
+    if (!bUseAsioTransport)
+    {
+        FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
+    }
+    else
+    {
+        gekko_default_adapter_destroy();
+    }
     
     SessionState = EGekkoSessionState::Inactive;
     

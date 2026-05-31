@@ -82,6 +82,8 @@ public:
 	void SetLocalAdapter(int32 Index);
 	#endif
 	
+	bool bUseAsioTransport = false;
+	
 
 private:
 	// subsystem functions

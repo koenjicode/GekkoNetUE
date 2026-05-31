@@ -89,7 +89,7 @@ GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(FIPv4Endpoint Endpoint)
 
     GekkoSocket = FUdpSocketBuilder(TEXT("GekkoNet Unreal Socket"))
     .AsNonBlocking()
-    .BoundToEndpoint(Endpoint)
+    .BoundToPort(Endpoint.Port)
     .WithReceiveBufferSize(sizeof(GekkoReceiveBuffer))
     .Build();
     
