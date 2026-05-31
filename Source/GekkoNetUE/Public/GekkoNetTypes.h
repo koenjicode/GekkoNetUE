@@ -47,6 +47,29 @@ enum class EGekkoSessionType : uint8
 };
 
 USTRUCT(BlueprintType)
+struct FGekkoEndpoint
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Address;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Port;
+	
+	FString ToString(bool WithPort = true) const
+	{
+		if (WithPort)
+		{
+			return FString::Printf(TEXT("%s:%d"), *Address, Port);
+		}
+		return *Address;
+	}
+	
+	
+	
+};
+
+USTRUCT(BlueprintType)
 struct FGekkoSimpleNetworkStats
 {
 	GENERATED_BODY()

@@ -4,11 +4,18 @@
 #include "GekkoNetLocalAdapter.h"
 #include "GekkoNetLog.h"
 #include "GekkoNetSimulationInterface.h"
-#include "GekkoNetSteamAdapter.h"
 #include "GekkoNetUnrealAdapter.h"
 
 #define STATS_UPDATE_TIMER_MAX 60
 #define FRAME_SKIP_TIMER_MAX 60
+
+void UGekkoNetSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+    Super::Initialize(Collection);
+    
+    FString DefaultEndpoint = "192.168.0.1:9000";
+    FIPv4Endpoint::FromHostAndPort(DefaultEndpoint, LocalEndpoint);
+}
 
 int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
 {
@@ -32,12 +39,6 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
             (unsigned int)Convert.Length()
         };
         ActorID = gekko_add_actor(Session, Type, &Remote);
-#if WITH_EDITOR
-        if (IsPlayInEditor())
-        {
-            GekkoNetLocalAdapter::MapLocalAddress(Address, ActorID);
-        }
-#endif
     }
     return ActorID;
 }
@@ -56,47 +57,21 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     Config.spectator_delay = InConfig.SpectatorDelay;
     Config.state_size = InConfig.StateSize;
     
-    if (gekko_create    (&Session, IsSpectator ? GekkoSpectateSession : GekkoGameSession)) {
+    if (gekko_create(&Session, IsSpectator ? GekkoSpectateSession : GekkoGameSession)) 
+    {
         gekko_start(Session, &Config);
-    } else
+    } 
+    else
     {
         UE_LOG(LogGekkoNet, Error, TEXT("Session is already running, failed to start a new one."));
         return;
     }
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
-#if WITH_EDITOR
-    if (IsPlayInEditor())
-    {
-        gekko_net_adapter_set(Session, GekkoNetLocalAdapter::GetLocalAdapter(LocalAdapterID));
-        UE_LOG(LogGekkoNet, Log, TEXT("Started a local PIE session for player %d"), LocalAdapterID);
-    }
-    else
-#endif
-    {
-        switch (TransportType)
-        {
-        case EGekkoTransportType::Asio:
-            gekko_net_adapter_set(Session, gekko_default_adapter(LocalPort));
-            break;
-        case EGekkoTransportType::Unreal:
-            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalPort));
-            break;
-        case EGekkoTransportType::Steam:
-            gekko_net_adapter_set(Session, GekkoNetSteamAdapter::Steam_Gekko_Adapter());
-            break;
-        }
-        const UEnum* Enum = StaticEnum<EGekkoTransportType>();
-        FString Name = Enum->GetNameStringByValue((int64)TransportType);
-        if (TransportType != EGekkoTransportType::Steam)
-        {
-            UE_LOG(LogGekkoNet, Log, TEXT("Started a session at port %hu using %s sockets."), LocalPort, *Name);
-        }
-        else
-        {
-            UE_LOG(LogGekkoNet, Log, TEXT("Started a session using %s sockets."), *Name);
-        }
-    }
+    
+    // gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint));
+    gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+    
     SessionState = EGekkoSessionState::Running;
 }
 
@@ -106,26 +81,9 @@ void UGekkoNetSubsystem::EndSession()
         return;
     
     gekko_destroy(&Session);
-#if WITH_EDITOR
-    if (IsPlayInEditor())
-    {
-        GekkoNetLocalAdapter::EmptyAddresses();
-    }
-    else
-#endif
-    {
-        switch (TransportType)
-        {
-        case EGekkoTransportType::Asio:
-            gekko_default_adapter_destroy();
-            break;
-        case EGekkoTransportType::Unreal:
-            FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
-            break;
-        case EGekkoTransportType::Steam:
-            break;
-        }
-    }
+    
+    // FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
+    gekko_default_adapter_destroy();
     
     SessionState = EGekkoSessionState::Inactive;
     
@@ -344,9 +302,19 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
     return FullNetStats;
 }
 
-void UGekkoNetSubsystem::SetLocalPort(int32 NewLocalPort)
+bool UGekkoNetSubsystem::SetLocalEndpoint(FString InEndpointString)
 {
-    LocalPort = NewLocalPort;
+    return FIPv4Endpoint::FromHostAndPort(InEndpointString, LocalEndpoint);
+}
+
+bool UGekkoNetSubsystem::SetLocalAddress(FString InAddress)
+{
+    return FIPv4Endpoint::Parse(InAddress, LocalEndpoint);
+}
+
+void UGekkoNetSubsystem::SetLocalPort(int32 InLocalPort)
+{
+    LocalEndpoint.Port = InLocalPort;
 }
 
 #if WITH_EDITOR
@@ -358,7 +326,7 @@ void UGekkoNetSubsystem::SetLocalAdapter(int32 Index)
 
 void UGekkoNetSubsystem::SetTransportType(EGekkoTransportType Type)
 {
-    TransportType = Type;
+    // To potentially destroy in a later update.
 }
 
 bool UGekkoNetSubsystem::SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost)

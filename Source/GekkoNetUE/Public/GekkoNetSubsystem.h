@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "gekkonet.h"
 #include "GekkoNetTypes.h"
+#include "Interfaces/IPv4/IPv4Endpoint.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GekkoNetSubsystem.generated.h"
 
@@ -23,6 +24,8 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
     
 public:
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	
 	UFUNCTION(BlueprintCallable)
 	int32 AddActor(EGekkoPlayerType PlayerType = EGekkoPlayerType::LocalPlayer, FString Address = "");
 	// Start the GekkoNet session based on the provided configuration and host.
@@ -50,8 +53,10 @@ public:
 	// Returns the advanced network stat information collected from the active session.
 	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
 	FGekkoFullNetworkStats GetFullNetworkStats(int32 Player) const;
-	
-	void SetLocalPort(int32 NewLocalPort);
+
+	bool SetLocalEndpoint(FString InEndpointString);
+	bool SetLocalAddress(FString InAddress);
+	void SetLocalPort(int32 InLocalPort);
 	// Set the type of socket that will be used to transfer data between connected clients.
 	void SetTransportType(EGekkoTransportType Type);
 	// Set the simulation host that will be used with GekkoNet.
@@ -109,10 +114,9 @@ private:
 	
 	GekkoSession* Session;
 	EGekkoSessionState SessionState;
-	EGekkoTransportType TransportType = EGekkoTransportType::Asio;
 	
 	TArray<int32> LocalPlayerIDs;
-	int32 LocalPort = 7000;
+	FIPv4Endpoint LocalEndpoint;
 	
 	// frames skipping and frames behind
 	
