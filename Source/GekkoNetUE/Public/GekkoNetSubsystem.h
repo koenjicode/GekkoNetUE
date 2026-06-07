@@ -24,13 +24,13 @@ class GEKKONETUE_API UGekkoNetSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
     
 public:
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	
 	UFUNCTION(BlueprintCallable)
 	int32 AddActor(EGekkoPlayerType PlayerType = EGekkoPlayerType::LocalPlayer, FString Address = "");
+	void CreateAdapter() const;
 	// Start the GekkoNet session based on the provided configuration and host.
 	UFUNCTION(BlueprintCallable)
 	void StartSession(FGekkoConfig InConfig, bool IsSpectator);
+	void DestroyAdapter() const;
 	// Shuts down an active GekkoNet session if running.
 	UFUNCTION(BlueprintCallable)
 	void EndSession();
@@ -69,13 +69,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool SetRunahead(int32 Runahead = 1);
 	
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnPlayerConnected;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnPlayerDisconnected;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoSyncingEvent OnPlayerSyncing;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoSessionStartedEvent OnSessionStarted;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorPaused;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoPlayerEvent OnSpectatorUnpaused;
-	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") FGekkoDesyncEvent OnDesyncDetected;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoPlayerEvent OnPlayerConnected;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoPlayerEvent OnPlayerDisconnected;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoSyncingEvent OnPlayerSyncing;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoSessionStartedEvent OnSessionStarted;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoPlayerEvent OnSpectatorPaused;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoPlayerEvent OnSpectatorUnpaused;
+	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
+	FGekkoDesyncEvent OnDesyncDetected;
 	
 #if WITH_EDITOR
 	// Set the local adapter that will be used in PlayInEditor scenarios.
@@ -83,6 +90,7 @@ public:
 	#endif
 	
 	bool bUseAsioTransport = false;
+	bool bUseDedicatedAdapterIfAvailable = false;
 	
 
 private:
@@ -118,7 +126,7 @@ private:
 	EGekkoSessionState SessionState;
 	
 	TArray<int32> LocalPlayerIDs;
-	FIPv4Endpoint LocalEndpoint;
+	FGekkoEndpoint LocalEndpoint;
 	
 	// frames skipping and frames behind
 	

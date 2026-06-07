@@ -13,7 +13,10 @@ public class GekkoNetUE : ModuleRules
 			"Engine",
 			"GekkoNet",
 			"Projects",
-			"SteamSockets"
+			"SteamSockets",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"CoreOnline",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

@@ -80,6 +80,31 @@ static GekkoNetAdapter UE_DefaultSocket{
     UE_FreeData
 };
 
+GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(uint16 Port)
+{
+    if (GekkoSocket)
+    {
+        UE_Gekko_Adapter_Destroy();
+    }
+
+    GekkoSocket = FUdpSocketBuilder(TEXT("GekkoNet Unreal Socket"))
+    .AsNonBlocking()
+    .BoundToPort(Port)
+    .WithReceiveBufferSize(sizeof(GekkoReceiveBuffer))
+    .Build();
+    
+    if (!GekkoSocket)
+    {
+        return nullptr;
+    }
+    
+    UE_LOG(LogGekkoNet, Log, TEXT("GekkoNet Unreal Socket created with port %d"), Port);
+    
+    UE_Print_Gekko_Adapter();
+    
+    return &UE_DefaultSocket;
+}
+
 GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(FIPv4Endpoint Endpoint)
 {
     if (GekkoSocket)
@@ -89,7 +114,7 @@ GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(FIPv4Endpoint Endpoint)
 
     GekkoSocket = FUdpSocketBuilder(TEXT("GekkoNet Unreal Socket"))
     .AsNonBlocking()
-    .BoundToPort(Endpoint.Port)
+    .BoundToEndpoint(Endpoint)
     .WithReceiveBufferSize(sizeof(GekkoReceiveBuffer))
     .Build();
     
@@ -98,8 +123,19 @@ GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(FIPv4Endpoint Endpoint)
         return nullptr;
     }
     
-    UE_LOG(LogGekkoNet, Log, TEXT("GekkoNet Unreal Socket created with addr %s"), *Endpoint.ToString());
+    UE_LOG(LogGekkoNet, Log, TEXT("GekkoNet Unreal Socket created with endpoint %s"), *Endpoint.ToString());
+    
+    UE_Print_Gekko_Adapter();
+    
     return &UE_DefaultSocket;
+}
+
+void FGekkoNetAdapter::UE_Print_Gekko_Adapter()
+{
+    TSharedRef<FInternetAddr> BoundAddr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+    GekkoSocket->GetAddress(*BoundAddr);
+
+    UE_LOG(LogGekkoNet, Log, TEXT("GekkoNet Unreal Socket bound to %s"), *BoundAddr->ToString(true));
 }
 
 void FGekkoNetAdapter::UE_Gekko_Adapter_Destroy()

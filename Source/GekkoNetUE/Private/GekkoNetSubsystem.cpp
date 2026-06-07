@@ -3,19 +3,13 @@
 #include "GekkoNetSubsystem.h"
 #include "GekkoNetLocalAdapter.h"
 #include "GekkoNetLog.h"
+#include "GekkoNetRPCAdapter.h"
 #include "GekkoNetSimulationInterface.h"
 #include "GekkoNetUnrealAdapter.h"
+#include "OnlineSubsystemUtils.h"
 
 #define STATS_UPDATE_TIMER_MAX 60
 #define FRAME_SKIP_TIMER_MAX 60
-
-void UGekkoNetSubsystem::Initialize(FSubsystemCollectionBase& Collection)
-{
-    Super::Initialize(Collection);
-    
-    FString DefaultEndpoint = "192.168.0.1:9000";
-    FIPv4Endpoint::FromHostAndPort(DefaultEndpoint, LocalEndpoint);
-}
 
 int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
 {
@@ -41,6 +35,30 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
         ActorID = gekko_add_actor(Session, Type, &Remote);
     }
     return ActorID;
+}
+
+void UGekkoNetSubsystem::CreateAdapter() const
+{
+    if (bUseAsioTransport)
+    {
+        gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+        return;
+    }
+
+    if (bUseDedicatedAdapterIfAvailable)
+    {
+        auto SubsystemName = Online::GetSubsystem(GetWorld())->GetSubsystemName();
+        UE_LOG(LogGekkoNet, Log, TEXT("Creating adapter for %s Subsystem."), *SubsystemName.ToString());
+
+        if (SubsystemName == "NULL")
+        {
+            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint.Port));
+            return;
+        }
+    }
+    
+    gekko_net_adapter_set(Session, FGekkoNetRPCAdapter::RPC_Gekko_Adapter(GetWorld()->GetFirstPlayerController()));
+    UE_LOG(LogGekkoNet, Log, TEXT("Creating Gekko RPC adapter."))
 }
 
 void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
@@ -69,16 +87,21 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
 
-    if (!bUseAsioTransport)
+    CreateAdapter();
+    
+    SessionState = EGekkoSessionState::Running;
+}
+
+void UGekkoNetSubsystem::DestroyAdapter() const
+{
+    if (bUseAsioTransport)
     {
-        gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint));
+        gekko_default_adapter_destroy();
     }
     else
     {
-        gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+        FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
     }
-    
-    SessionState = EGekkoSessionState::Running;
 }
 
 void UGekkoNetSubsystem::EndSession()
@@ -88,14 +111,7 @@ void UGekkoNetSubsystem::EndSession()
     
     gekko_destroy(&Session);
 
-    if (!bUseAsioTransport)
-    {
-        FGekkoNetAdapter::UE_Gekko_Adapter_Destroy();
-    }
-    else
-    {
-        gekko_default_adapter_destroy();
-    }
+    DestroyAdapter();
     
     SessionState = EGekkoSessionState::Inactive;
     
@@ -316,12 +332,14 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
 
 bool UGekkoNetSubsystem::SetLocalEndpoint(FString InEndpointString)
 {
-    return FIPv4Endpoint::FromHostAndPort(InEndpointString, LocalEndpoint);
+    LocalEndpoint.Address = InEndpointString;
+    return true;
 }
 
 bool UGekkoNetSubsystem::SetLocalAddress(FString InAddress)
 {
-    return FIPv4Endpoint::Parse(InAddress, LocalEndpoint);
+    LocalEndpoint.Address = InAddress;
+    return true;
 }
 
 void UGekkoNetSubsystem::SetLocalPort(int32 InLocalPort)

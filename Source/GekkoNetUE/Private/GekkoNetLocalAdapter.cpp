@@ -52,7 +52,6 @@ static GekkoNetResult** ReceivePackets(uint8 Receiver, TQueue<TArray<uint8>>& In
     while (InPackets.Dequeue(Packet))
     {
         uint8 Sender = Packet[0];
-        // UE_LOG(LogTemp, Warning, TEXT("Receive: Receiver=%d From=%d Size=%d"), Receiver, Sender, Packet.Num());
 
         GekkoNetResult* Result = static_cast<GekkoNetResult*>(FMemory::Malloc(sizeof(GekkoNetResult)));
         FMemory::Memzero(Result, sizeof(GekkoNetResult));

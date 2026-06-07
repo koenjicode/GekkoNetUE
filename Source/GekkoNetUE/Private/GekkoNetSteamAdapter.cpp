@@ -76,7 +76,7 @@ static GekkoNetAdapter SteamAdapter
 	Steam_Free
 };
 
-GekkoNetAdapter* GekkoNetSteamAdapter::Steam_Gekko_Adapter()
+GekkoNetAdapter* FGekkoNetSteamAdapter::Steam_Gekko_Adapter()
 {
 	SteamSubsystem = ISocketSubsystem::Get(FName("SteamSockets"));
 	
@@ -114,7 +114,7 @@ GekkoNetAdapter* GekkoNetSteamAdapter::Steam_Gekko_Adapter()
 	return &SteamAdapter;
 }
 
-void GekkoNetSteamAdapter::Steam_Gekko_Adapter_Destroy()
+void FGekkoNetSteamAdapter::Steam_Gekko_Adapter_Destroy()
 {
 	if (!SteamSocket)
 	{

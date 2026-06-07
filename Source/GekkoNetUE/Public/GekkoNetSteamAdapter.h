@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "gekkonet.h"
 
-class GekkoNetSteamAdapter
+class FGekkoNetSteamAdapter
 {
 public:
 	static GekkoNetAdapter* Steam_Gekko_Adapter();
