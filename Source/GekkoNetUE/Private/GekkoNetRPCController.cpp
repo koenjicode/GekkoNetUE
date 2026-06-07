@@ -57,7 +57,6 @@ GekkoNetResult** AGekkoNetRPCController::ReceiveGekkoData(int* Length)
 		
 		FMemory::Memcpy(Result->data, Packet.GetData() + SenderSize, Result->data_len);
 		
-		FString MyStr = PlayerState->GetUniqueId().ToString();
 		FString AddrStr = GetRemoteAddressFromIdentifier(Packet);
 		FTCHARToUTF8 Convert(AddrStr);
 
