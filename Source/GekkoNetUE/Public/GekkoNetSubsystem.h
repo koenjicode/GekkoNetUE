@@ -90,7 +90,7 @@ public:
 	#endif
 	
 	bool bUseAsioTransport = false;
-	bool bUseDedicatedAdapterIfAvailable = false;
+	bool bUseDirectAdapterIfAvailable = false;
 	
 
 private:

@@ -105,31 +105,6 @@ GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(uint16 Port)
     return &UE_DefaultSocket;
 }
 
-GekkoNetAdapter* FGekkoNetAdapter::UE_Gekko_Adapter(FIPv4Endpoint Endpoint)
-{
-    if (GekkoSocket)
-    {
-        UE_Gekko_Adapter_Destroy();
-    }
-
-    GekkoSocket = FUdpSocketBuilder(TEXT("GekkoNet Unreal Socket"))
-    .AsNonBlocking()
-    .BoundToEndpoint(Endpoint)
-    .WithReceiveBufferSize(sizeof(GekkoReceiveBuffer))
-    .Build();
-    
-    if (!GekkoSocket)
-    {
-        return nullptr;
-    }
-    
-    UE_LOG(LogGekkoNet, Log, TEXT("GekkoNet Unreal Socket created with endpoint %s"), *Endpoint.ToString());
-    
-    UE_Print_Gekko_Adapter();
-    
-    return &UE_DefaultSocket;
-}
-
 void FGekkoNetAdapter::UE_Print_Gekko_Adapter()
 {
     TSharedRef<FInternetAddr> BoundAddr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();

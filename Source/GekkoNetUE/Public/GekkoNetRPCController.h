@@ -20,10 +20,10 @@ public:
 	virtual void SendGekkoData(GekkoNetAddress* Addr, const char* Data, int Length);
 protected:
 	// Handles parsing the packet data through the server.
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Unreliable)
 	virtual void Server_SendGekkoData(const FString& TargetAddress, const TArray<uint8>& Packet) const;
 	// Handles what the client does when they recieve the packet information.
-	UFUNCTION(Client, Reliable)
+	UFUNCTION(Client, Unreliable)
 	virtual void Client_SendGekkoData(const TArray<uint8>& Packet);
 	// Get the Sender's address from the sent packet.
 	UFUNCTION()

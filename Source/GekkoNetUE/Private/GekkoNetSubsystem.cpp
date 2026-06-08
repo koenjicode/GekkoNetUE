@@ -39,20 +39,22 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
 
 void UGekkoNetSubsystem::CreateAdapter() const
 {
-    if (bUseAsioTransport)
-    {
-        gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
-        return;
-    }
 
-    if (bUseDedicatedAdapterIfAvailable)
+    if (bUseDirectAdapterIfAvailable)
     {
         auto SubsystemName = Online::GetSubsystem(GetWorld())->GetSubsystemName();
         UE_LOG(LogGekkoNet, Log, TEXT("Creating adapter for %s Subsystem."), *SubsystemName.ToString());
 
         if (SubsystemName == "NULL")
         {
-            gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint.Port));
+            if (bUseAsioTransport)
+            {
+                gekko_net_adapter_set(Session, gekko_default_adapter(LocalEndpoint.Port));
+            }
+            else
+            {
+                gekko_net_adapter_set(Session, FGekkoNetAdapter::UE_Gekko_Adapter(LocalEndpoint.Port));
+            }
             return;
         }
     }
@@ -332,7 +334,11 @@ FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) con
 
 bool UGekkoNetSubsystem::SetLocalEndpoint(FString InEndpointString)
 {
-    LocalEndpoint.Address = InEndpointString;
+    FString NewAddress;
+    FString NewPort;
+    InEndpointString.Split(":", &NewAddress, &NewPort);
+    LocalEndpoint.Address = NewAddress;
+    LocalEndpoint.Port = FCString::Atoi(*NewPort);
     return true;
 }
 
