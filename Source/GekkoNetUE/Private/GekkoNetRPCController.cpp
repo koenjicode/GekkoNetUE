@@ -37,7 +37,7 @@ void AGekkoNetRPCController::Server_SendGekkoData_Implementation(const FString& 
 void AGekkoNetRPCController::Client_SendGekkoData_Implementation(const TArray<uint8>& Packet)
 {
 	GekkoMessages.Enqueue(Packet);
-	UE_LOG(LogTemp, Log, TEXT("Data sent to %s from %s"), *PlayerState->GetUniqueId().ToString(), *GetRemoteAddressFromIdentifier(Packet));
+	UE_LOG(LogTemp, VeryVerbose, TEXT("Data sent to %s from %s"), *PlayerState->GetUniqueId().ToString(), *GetRemoteAddressFromIdentifier(Packet));
 }
 
 GekkoNetResult** AGekkoNetRPCController::ReceiveGekkoData(int* Length)
