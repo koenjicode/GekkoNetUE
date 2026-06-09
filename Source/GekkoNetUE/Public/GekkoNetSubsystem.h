@@ -46,13 +46,14 @@ public:
 	EGekkoSessionState GetSessionState() const { return SessionState; };
 	// Get the num of players allowed to be in the session.
 	UFUNCTION(BlueprintPure)
-	int32 GetNumOfPlayers() const { return Config.num_players; };
-	// Return the simplified network stats collected from the active session.
+	int32 GetNumOfPlayers() const { return Config.num_players; }
 	UFUNCTION()
-	FGekkoSimpleNetworkStats UpdateNetworkStats(int32 Player);
+	void UpdateNetworkStats();
+	UFUNCTION(BlueprintPure)
+	FGekkoNetworkStats GetNetworkStats(int32 Index);
 	// Returns the advanced network stat information collected from the active session.
 	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
-	FGekkoFullNetworkStats GetFullNetworkStats(int32 Player) const;
+	FGekkoAdvancedNetworkStats GetFullNetworkStats(int32 Player) const;
 
 	bool SetLocalEndpoint(FString InEndpointString);
 	bool SetLocalAddress(FString InAddress);
@@ -63,11 +64,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool SetSimulationHost(TScriptInterface<IGekkoNetSimulationInterface> NewHost);
 	// Set a Player's input delay within the current session.
+	bool SetLocalDelay(int32 Delay, bool AdjustWithRunahead = true);
 	UFUNCTION(BlueprintCallable)
-	bool SetLocalDelay(int32 Delay, int32 LocalPlayer);
+	bool SetLocalDelay(int32 Delay, int32 LocalPlayer, bool AdjustWithRunahead = true);
 	// Set how many frames ahead the simulation should run.
 	UFUNCTION(BlueprintCallable)
-	bool SetRunahead(int32 Runahead = 1);
+	bool SetRunahead(int32 Runahead = 1, bool AutoAdjustLocalDelay = false);
 	
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
 	FGekkoPlayerEvent OnPlayerConnected;
@@ -84,13 +86,20 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
 	FGekkoDesyncEvent OnDesyncDetected;
 	
+	int32 NetStatsUpdateTimer;
+
 #if WITH_EDITOR
 	// Set the local adapter that will be used in PlayInEditor scenarios.
 	void SetLocalAdapter(int32 Index);
 	#endif
 	
-	bool bUseAsioTransport = false;
+	// Whether direct P2P adapters will be used over the RPC adapter implementation.
 	bool bUseDirectAdapterIfAvailable = false;
+	// Whether to use asio transport that comes with GekkoNet instead of the NULL subsystem socket.
+	bool bUseAsioTransport = false;
+	// How long before network stats are updated.
+	// this is ticked based on the frames of your game loop, so it's best to ensure it ticks at least one full second!
+	int32 FramesBeforeNextStatsUpdate = 60;
 	
 
 private:
@@ -108,6 +117,8 @@ private:
 	
 	bool NeedToCatchUp() const;
 	
+	TArray<int32> LocalPlayers;
+	
 #if WITH_EDITOR
 	// Checks whether not the current session was created in PIE.
 	bool IsPlayInEditor() const;
@@ -117,8 +128,6 @@ private:
 	bool bDisablePlayInEditorAdapters = false;
 	int32 LocalAdapterID = 0;
 #endif
-	
-	FGekkoSimpleNetworkStats NetStats;
 	
 	// session and stored session data
 	
@@ -130,16 +139,24 @@ private:
 	
 	// frames skipping and frames behind
 	
-	int32 FrameMaxRollback = 0;
+	int32 MaxRollbackFrames = 0;
 	int32 FrameSkipTimerMax = 60;
 	int32 FramesAllowedToSkip = 1;
 	int32 FrameSkipTimer = 0;
 	int32 FramesBehind = 0;
 	
+protected:
+	
 	// delay and runahead
 	
-	int32 LocalDelay = DEFAULT_INPUT_DELAY;
+	UPROPERTY(BlueprintReadOnly)
+	int32 LocalDelay;
+	UPROPERTY(BlueprintReadOnly)
 	int32 LocalRunahead;
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FGekkoNetworkStats> NetStats;
+	
+private:
 	
 	// game simulation
 	

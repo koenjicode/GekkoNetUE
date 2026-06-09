@@ -26,14 +26,16 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
     }
     else
     {
-        FTCHARToUTF8 Convert(*Address);
+        auto ConvertedAddress = StringCast<UTF8CHAR>(*Address);
         GekkoNetAddress Remote
         {
-            (void*)Convert.Get(),
-            (unsigned int)Convert.Length()
+            (void*)ConvertedAddress.Get(),
+            (unsigned int)ConvertedAddress.Length()
         };
         ActorID = gekko_add_actor(Session, Type, &Remote);
     }
+    
+    LocalPlayers.Add(ActorID);
     return ActorID;
 }
 
@@ -90,6 +92,9 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     LocalInputBuffer.SetNumZeroed(Config.input_size);
 
     CreateAdapter();
+    
+    NetStats.Empty();
+    NetStats.AddZeroed(Config.num_players);
     
     SessionState = EGekkoSessionState::Running;
 }
@@ -154,6 +159,11 @@ void UGekkoNetSubsystem::RunSession()
 
     FrameSkipTimer -= 1;
     FrameSkipTimer = FMath::Max(FrameSkipTimer, 0);
+
+    if (NetStats.Num() > 0)
+    {
+        UpdateNetworkStats();
+    }
 }
 
 #if WITH_EDITOR
@@ -297,33 +307,57 @@ void UGekkoNetSubsystem::ProcessEvents()
             break;
         }
     }
-    FrameMaxRollback = FMath::Max(FrameMaxRollback, FramesRolledBack);
+    MaxRollbackFrames = FMath::Max(MaxRollbackFrames, FramesRolledBack);
 }
 
-FGekkoSimpleNetworkStats UGekkoNetSubsystem::UpdateNetworkStats(int32 Player)
+void UGekkoNetSubsystem::UpdateNetworkStats()
 {
-    GekkoNetworkStats GNetStats;
-    gekko_network_stats(Session, Player, &GNetStats);
+    if (NetStatsUpdateTimer == 0)
+    {
+        for (int i = 0; i < NetStats.Num(); ++i)
+        {
+            auto& PlayerNetStats = NetStats[i];
+            
+            GekkoNetworkStats net_stats;
+            gekko_network_stats(Session, i, &net_stats);
 
-    NetStats.Ping = GNetStats.avg_ping;
-    NetStats.Delay = LocalDelay;
+            PlayerNetStats.Ping = net_stats.avg_ping;
+            PlayerNetStats.Delay = LocalDelay - LocalRunahead;
 
-    if (FrameMaxRollback < NetStats.Rollback) {
-        NetStats.Rollback -= 1;
-    } else {
-        NetStats.Rollback = FrameMaxRollback;
+            if (MaxRollbackFrames < PlayerNetStats.Rollback) 
+            {
+                PlayerNetStats.Rollback -= 1;
+            } 
+            else 
+            {
+                PlayerNetStats.Rollback = MaxRollbackFrames;
+            }
+        }
+        
+        MaxRollbackFrames = 0;
+        NetStatsUpdateTimer = FramesBeforeNextStatsUpdate;
     }
     
-    FrameMaxRollback = 0;
-    return NetStats;
+    NetStatsUpdateTimer -= 1;
+    NetStatsUpdateTimer = FMath::Max(NetStatsUpdateTimer, 0);
 }
 
-FGekkoFullNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) const
+FGekkoNetworkStats UGekkoNetSubsystem::GetNetworkStats(int32 Index)
+{
+    if (!NetStats.IsValidIndex(Index))
+    {
+        UE_LOG(LogGekkoNet, Log, TEXT("Cannot retrieve network stats for Player %d, presenting empty data."), Index);
+        return FGekkoNetworkStats();
+    }
+    return NetStats[Index];
+}
+
+FGekkoAdvancedNetworkStats UGekkoNetSubsystem::GetFullNetworkStats(int32 Player) const
 {
     GekkoNetworkStats GNetStats;
     gekko_network_stats(Session, Player, &GNetStats);
     
-    FGekkoFullNetworkStats FullNetStats;
+    FGekkoAdvancedNetworkStats FullNetStats;
     FullNetStats.AvgPing = GNetStats.avg_ping;
     FullNetStats.Jitter = GNetStats.jitter;
     FullNetStats.KbReceived = GNetStats.kb_received;
@@ -371,28 +405,49 @@ bool UGekkoNetSubsystem::SetSimulationHost(TScriptInterface<IGekkoNetSimulationI
     return SimHost.GetObject() ? true : false;
 }
 
-bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, int32 LocalPlayer)
+bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, bool AdjustWithRunahead)
+{
+    int32 SuccessCount = 0;
+    for (int32 i = 0; i < LocalPlayers.Num(); i++)
+    {
+        if (SetLocalDelay(Delay, LocalPlayers[i], AdjustWithRunahead))
+        {
+            ++SuccessCount;
+        }
+    }
+    return SuccessCount == LocalPlayers.Num();
+}
+
+bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, int32 LocalPlayer, bool AdjustWithRunahead)
 {
     if (Session == nullptr)
         return false;
 
     if (LocalPlayer < 0 || LocalPlayer > Config.num_players)
         return false;
+
+    const int32 NewDelay = AdjustWithRunahead ? Delay + LocalRunahead : Delay;
+    LocalDelay = FMath::Max(NewDelay, 0);
     
-    LocalDelay = FMath::Max(Delay, 0);
     gekko_set_local_delay(Session, LocalPlayer, LocalDelay);
     UE_LOG(LogGekkoNet, Log, TEXT("Gekko Delay has been updated to %d for Player %d."), LocalDelay, LocalPlayer);
     
     return true;
 }
 
-bool UGekkoNetSubsystem::SetRunahead(int32 Runahead)
+bool UGekkoNetSubsystem::SetRunahead(int32 Runahead, bool AutoAdjustLocalDelay)
 {
     if (Session == nullptr)
         return false;
     
     LocalRunahead = FMath::Max(Runahead, 0);
     gekko_set_runahead(Session, LocalRunahead);
+
+    if (AutoAdjustLocalDelay)
+    {
+        SetLocalDelay(LocalDelay, 0, true);
+    }
+    
     UE_LOG(LogGekkoNet, Log, TEXT("Gekko Runahead has been updated to %d."), LocalRunahead);
     
     return true;

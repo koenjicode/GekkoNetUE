@@ -70,25 +70,33 @@ struct FGekkoEndpoint
 };
 
 USTRUCT(BlueprintType)
-struct FGekkoSimpleNetworkStats
+struct FGekkoNetworkStats
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) int32 Delay;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) float Ping;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) int32 Rollback;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	int32 Delay;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	float Ping;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	int32 Rollback;
 };
 
 USTRUCT(BlueprintType)
-struct FGekkoFullNetworkStats
+struct FGekkoAdvancedNetworkStats
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) float KbSent = 0.f;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) float KbReceived = 0.f;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) int32 LastPing = 0;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) float AvgPing = 0.f;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) float Jitter = 0.f;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	float KbSent = 0.f;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	float KbReceived = 0.f;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	int32 LastPing = 0;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	float AvgPing = 0.f;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly) 
+	float Jitter = 0.f;
 };
 
 USTRUCT(BlueprintType)
