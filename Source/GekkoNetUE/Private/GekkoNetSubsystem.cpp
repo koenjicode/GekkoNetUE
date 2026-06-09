@@ -426,7 +426,7 @@ bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, int32 LocalPlayer, bool Adju
     if (LocalPlayer < 0 || LocalPlayer > Config.num_players)
         return false;
 
-    const int32 NewDelay = AdjustWithRunahead ? Delay + LocalRunahead : Delay;
+    const int32 NewDelay = AdjustWithRunahead ? LocalRunahead + Delay: Delay;
     LocalDelay = FMath::Max(NewDelay, 0);
     
     gekko_set_local_delay(Session, LocalPlayer, LocalDelay);
@@ -435,18 +435,13 @@ bool UGekkoNetSubsystem::SetLocalDelay(int32 Delay, int32 LocalPlayer, bool Adju
     return true;
 }
 
-bool UGekkoNetSubsystem::SetRunahead(int32 Runahead, bool AutoAdjustLocalDelay)
+bool UGekkoNetSubsystem::SetRunahead(int32 Runahead)
 {
     if (Session == nullptr)
         return false;
     
     LocalRunahead = FMath::Max(Runahead, 0);
     gekko_set_runahead(Session, LocalRunahead);
-
-    if (AutoAdjustLocalDelay)
-    {
-        SetLocalDelay(LocalDelay, 0, true);
-    }
     
     UE_LOG(LogGekkoNet, Log, TEXT("Gekko Runahead has been updated to %d."), LocalRunahead);
     

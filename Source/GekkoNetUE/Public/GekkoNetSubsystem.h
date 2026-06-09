@@ -69,7 +69,7 @@ public:
 	bool SetLocalDelay(int32 Delay, int32 LocalPlayer, bool AdjustWithRunahead = true);
 	// Set how many frames ahead the simulation should run.
 	UFUNCTION(BlueprintCallable)
-	bool SetRunahead(int32 Runahead = 1, bool AutoAdjustLocalDelay = false);
+	bool SetRunahead(int32 Runahead = 1);
 	
 	UPROPERTY(BlueprintAssignable, Category = "GekkoNet|Events") 
 	FGekkoPlayerEvent OnPlayerConnected;
