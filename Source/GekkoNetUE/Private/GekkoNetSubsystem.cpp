@@ -65,9 +65,8 @@ void UGekkoNetSubsystem::CreateAdapter() const
     UE_LOG(LogGekkoNet, Log, TEXT("Creating Gekko RPC adapter."))
 }
 
-void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
+void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType SessionType)
 {
-    
     FMemory::Memzero(&Config, sizeof(Config));
     Config.num_players = InConfig.NumPlayers;
     Config.check_distance = InConfig.CheckDistance;
@@ -79,7 +78,21 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, bool IsSpectator)
     Config.spectator_delay = InConfig.SpectatorDelay;
     Config.state_size = InConfig.StateSize;
     
-    if (gekko_create(&Session, IsSpectator ? GekkoSpectateSession : GekkoGameSession)) 
+    GekkoSessionType InSessionType = {};
+    switch (SessionType)
+    {
+    case EGekkoSessionType::Game:
+        InSessionType = GekkoGameSession;
+        break;
+    case EGekkoSessionType::Spectator:
+        InSessionType = GekkoSpectateSession;
+        break;
+    case EGekkoSessionType::Stress:
+        InSessionType = GekkoStressSession;
+        break;
+    }
+
+    if (gekko_create(&Session, InSessionType)) 
     {
         gekko_start(Session, &Config);
     } 

@@ -29,7 +29,7 @@ public:
 	void CreateAdapter() const;
 	// Start the GekkoNet session based on the provided configuration and host.
 	UFUNCTION(BlueprintCallable)
-	void StartSession(FGekkoConfig InConfig, bool IsSpectator);
+	void StartSession(FGekkoConfig InConfig, EGekkoSessionType SessionType = EGekkoSessionType::Game);
 	void DestroyAdapter() const;
 	// Shuts down an active GekkoNet session if running.
 	UFUNCTION(BlueprintCallable)
