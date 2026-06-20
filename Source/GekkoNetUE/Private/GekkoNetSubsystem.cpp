@@ -95,6 +95,11 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType I
         break;
     }
 
+    if (SessionType == GekkoStressSession)
+    {
+        FramesAllowedToSkip = FMath::Max(InConfig.CheckDistance, 1);
+    }
+
     if (gekko_create(&Session, SessionType)) 
     {
         gekko_start(Session, &Config);

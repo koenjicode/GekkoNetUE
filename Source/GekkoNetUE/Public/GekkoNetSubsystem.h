@@ -160,10 +160,9 @@ protected:
 	
 private:
 	
-	// game simulation
-	
 	UPROPERTY()
 	TScriptInterface<IGekkoNetSimulationInterface> SimHost;
 	TArray<uint8> LocalInputBuffer;
-	GekkoConfig Config;
+	
+	GekkoConfig Config = {};
 };
