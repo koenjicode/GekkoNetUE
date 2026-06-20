@@ -41,6 +41,10 @@ int32 UGekkoNetSubsystem::AddActor(EGekkoPlayerType PlayerType, FString Address)
 
 void UGekkoNetSubsystem::CreateAdapter() const
 {
+    if (SessionType == GekkoStressSession)
+    {
+        return;
+    }
 
     if (bUseDirectAdapterIfAvailable)
     {
@@ -65,7 +69,7 @@ void UGekkoNetSubsystem::CreateAdapter() const
     UE_LOG(LogGekkoNet, Log, TEXT("Creating Gekko RPC adapter."))
 }
 
-void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType SessionType)
+void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType InSessionType)
 {
     FMemory::Memzero(&Config, sizeof(Config));
     Config.num_players = InConfig.NumPlayers;
@@ -78,21 +82,20 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType S
     Config.spectator_delay = InConfig.SpectatorDelay;
     Config.state_size = InConfig.StateSize;
     
-    GekkoSessionType InSessionType = {};
-    switch (SessionType)
+    switch (InSessionType)
     {
     case EGekkoSessionType::Game:
-        InSessionType = GekkoGameSession;
+        SessionType = GekkoGameSession;
         break;
     case EGekkoSessionType::Spectator:
-        InSessionType = GekkoSpectateSession;
+        SessionType = GekkoSpectateSession;
         break;
     case EGekkoSessionType::Stress:
-        InSessionType = GekkoStressSession;
+        SessionType = GekkoStressSession;
         break;
     }
 
-    if (gekko_create(&Session, InSessionType)) 
+    if (gekko_create(&Session, SessionType)) 
     {
         gekko_start(Session, &Config);
     } 
@@ -103,7 +106,7 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType S
     }
     
     LocalInputBuffer.SetNumZeroed(Config.input_size);
-
+    
     CreateAdapter();
     
     NetStats.Empty();
@@ -114,6 +117,10 @@ void UGekkoNetSubsystem::StartSession(FGekkoConfig InConfig, EGekkoSessionType S
 
 void UGekkoNetSubsystem::DestroyAdapter() const
 {
+    if (SessionType == GekkoStressSession)
+    {
+        return;
+    }
     if (bUseAsioTransport)
     {
         gekko_default_adapter_destroy();

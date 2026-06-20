@@ -54,6 +54,8 @@ public:
 	// Returns the advanced network stat information collected from the active session.
 	UFUNCTION(BlueprintPure, DisplayName="Get Advanced Network Stats")
 	FGekkoAdvancedNetworkStats GetFullNetworkStats(int32 Player) const;
+	
+	GekkoSessionType SessionType = GekkoGameSession;
 
 	bool SetLocalEndpoint(FString InEndpointString);
 	bool SetLocalAddress(FString InAddress);
